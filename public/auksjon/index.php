@@ -3,7 +3,8 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/layout.php';
 
-$items = db()->query('SELECT lot, title, description, category, min_price, giver, image FROM items ORDER BY lot')->fetchAll();
+$items = db()->query('SELECT id, lot, title, description, category, min_price, giver, image FROM items ORDER BY lot')->fetchAll();
+$extraImages = extra_images();
 $gallery = db()->query('SELECT image, caption FROM gallery ORDER BY id')->fetchAll();
 $usedCategories = array_values(array_filter(categories(), fn ($c) => in_array($c, array_column($items, 'category'), true)));
 
@@ -37,8 +38,10 @@ page_header('Auksjon · Høstmessa', 'auksjon');
           data-desc="<?= h($item['description']) ?>"
           data-cat="<?= h($item['category']) ?>"
           data-price="<?= h(kr($item['min_price'] === null ? null : (int) $item['min_price'])) ?>"
-          data-giver="<?= h($item['giver']) ?>">
-          <div class="photo"><?= photo_html($item) ?><span class="lot"><?= h(lot_no((int) $item['lot'])) ?></span></div>
+          data-giver="<?= h($item['giver']) ?>"
+          <?php $extras = array_map(fn ($x) => '/uploads/' . $x['image'], $extraImages[(int) $item['id']] ?? []); ?>
+          data-images="<?= h(json_encode($item['image'] ? array_merge(['/uploads/' . $item['image']], $extras) : $extras)) ?>">
+          <div class="photo"><?= photo_html($item) ?><span class="lot"><?= h(lot_no((int) $item['lot'])) ?></span><?php if ($extras): ?><span class="more-photos"><?= count($extras) + 1 ?> bilder</span><?php endif ?></div>
           <div class="card-body">
             <?php if ($item['category'] !== ''): ?><span class="cat"><?= h($item['category']) ?></span><?php endif ?>
             <h3><?= h($item['title']) ?></h3>
@@ -81,7 +84,12 @@ page_header('Auksjon · Høstmessa', 'auksjon');
   <div style="position:relative">
     <button class="close" id="dlg-close" type="button" aria-label="Lukk">×</button>
     <div class="dlg">
-      <div class="photo" id="dlg-photo"></div>
+      <div class="photo dlg-photos">
+        <div class="dlg-photo-main" id="dlg-photo"></div>
+        <button class="lb-nav lb-prev" id="dlg-prev" type="button" aria-label="Forrige bilde" hidden>‹</button>
+        <button class="lb-nav lb-next" id="dlg-next" type="button" aria-label="Neste bilde" hidden>›</button>
+        <div class="dlg-thumbs" id="dlg-thumbs" hidden></div>
+      </div>
       <div class="dlg-body">
         <div class="cat" id="dlg-cat"></div>
         <h2 id="dlg-title"></h2>

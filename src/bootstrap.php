@@ -50,6 +50,12 @@ function ensure_schema(PDO $pdo): void
     if ((int) $pdo->query('SELECT COUNT(*) FROM categories')->fetchColumn() === 0) {
         $pdo->exec("INSERT IGNORE INTO categories (name) SELECT DISTINCT category FROM items WHERE category <> ''");
     }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS item_images (
+        id      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        item_id INT UNSIGNED NOT NULL,
+        image   VARCHAR(100) NOT NULL,
+        CONSTRAINT fk_item_images_item FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->exec("CREATE TABLE IF NOT EXISTS gallery (
         id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         image      VARCHAR(100) NOT NULL,
@@ -79,6 +85,18 @@ function ensure_first_user(PDO $pdo): void
 }
 
 // Kategoriene komiteen har laget, alfabetisk.
+const MAX_EXTRA_IMAGES = 12;
+
+// Ekstra bilder for varer, gruppert på vare-ID.
+function extra_images(): array
+{
+    $byItem = [];
+    foreach (db()->query('SELECT id, item_id, image FROM item_images ORDER BY id') as $row) {
+        $byItem[(int) $row['item_id']][] = $row;
+    }
+    return $byItem;
+}
+
 function categories(): array
 {
     return db()->query('SELECT name FROM categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
@@ -163,6 +181,12 @@ function take_flashes(): array
 
 function redirect(string $to): never
 {
+    // Skjemaer som sendes med JavaScript, får adressen som JSON og går dit selv.
+    if (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json') {
+        header('Content-Type: application/json');
+        echo json_encode(['redirect' => $to]);
+        exit;
+    }
     header('Location: ' . $to, true, 303);
     exit;
 }

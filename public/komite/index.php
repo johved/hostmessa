@@ -81,16 +81,58 @@ if ($action === 'save_item') {
     if ($existing) {
         db()->prepare('UPDATE items SET title = ?, description = ?, category = ?, min_price = ?, giver = ?, image = ? WHERE id = ?')
             ->execute([$title, $description, $category, $minPrice, $giver, $image, $id]);
-        flash('ok', sprintf('«%s» (%s) er oppdatert.', $title, lot_no((int) $existing['lot'])));
+        $message = sprintf('«%s» (%s) er oppdatert.', $title, lot_no((int) $existing['lot']));
     } else {
         $pdo = db();
         $pdo->beginTransaction();
         $lot = (int) $pdo->query('SELECT COALESCE(MAX(lot), 0) + 1 FROM items FOR UPDATE')->fetchColumn();
         $pdo->prepare('INSERT INTO items (lot, title, description, category, min_price, giver, image, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$lot, $title, $description, $category, $minPrice, $giver, $image, $user['id']]);
+        $id = (int) $pdo->lastInsertId();
         $pdo->commit();
-        flash('ok', sprintf('«%s» er lagt ut som %s og vises nå i katalogen.', $title, lot_no($lot)));
+        $message = sprintf('«%s» er lagt ut som %s og vises nå i katalogen.', $title, lot_no($lot));
     }
+
+    // Flere bilder: fjern de som er krysset av, og legg til nye.
+    $remove = array_map('intval', (array) ($_POST['remove_extra'] ?? []));
+    $extras = db()->prepare('SELECT id, image FROM item_images WHERE item_id = ? ORDER BY id');
+    $extras->execute([$id]);
+    $kept = 0;
+    foreach ($extras->fetchAll() as $extra) {
+        if (in_array((int) $extra['id'], $remove, true)) {
+            db()->prepare('DELETE FROM item_images WHERE id = ?')->execute([$extra['id']]);
+            delete_image($extra['image']);
+        } else {
+            $kept++;
+        }
+    }
+    $insert = db()->prepare('INSERT INTO item_images (item_id, image) VALUES (?, ?)');
+    foreach (uploaded_files('extra_images') as $file) {
+        if ($kept >= MAX_EXTRA_IMAGES) {
+            flash('error', sprintf('En vare kan ha maks %d ekstra bilder. Resten ble ikke lagret.', MAX_EXTRA_IMAGES));
+            break;
+        }
+        try {
+            $name = save_uploaded_image($file);
+            make_thumbnail($name);
+            $insert->execute([$id, $name]);
+            $kept++;
+        } catch (RuntimeException $e) {
+            flash('error', $file['name'] . ': ' . $e->getMessage());
+        }
+    }
+
+    // Uten hovedbilde blir første ekstra bilde hovedbilde.
+    if ($image === null) {
+        $first = db()->prepare('SELECT id, image FROM item_images WHERE item_id = ? ORDER BY id LIMIT 1');
+        $first->execute([$id]);
+        if ($promote = $first->fetch()) {
+            db()->prepare('UPDATE items SET image = ? WHERE id = ?')->execute([$promote['image'], $id]);
+            db()->prepare('DELETE FROM item_images WHERE id = ?')->execute([$promote['id']]);
+        }
+    }
+
+    flash('ok', $message);
     redirect('/komite/');
 }
 
@@ -98,8 +140,12 @@ if ($action === 'delete_item') {
     $stmt = db()->prepare('SELECT title, image FROM items WHERE id = ?');
     $stmt->execute([(int) ($_POST['id'] ?? 0)]);
     if ($item = $stmt->fetch()) {
+        $extras = db()->prepare('SELECT image FROM item_images WHERE item_id = ?');
+        $extras->execute([(int) $_POST['id']]);
+        $extraImages = $extras->fetchAll(PDO::FETCH_COLUMN);
         db()->prepare('DELETE FROM items WHERE id = ?')->execute([(int) $_POST['id']]);
         delete_image($item['image']);
+        array_map('delete_image', $extraImages);
         flash('ok', sprintf('«%s» er fjernet fra katalogen.', $item['title']));
     }
     redirect('/komite/');
@@ -319,6 +365,7 @@ if (isset($_GET['edit'])) {
     $stmt->execute([(int) $_GET['edit']]);
     $edit = $stmt->fetch() ?: null;
 }
+$extraImages = extra_images();
 $f = $edit ?? ['id' => 0, 'title' => '', 'description' => '', 'category' => '', 'min_price' => null, 'giver' => '', 'image' => null];
 
 page_header('For komiteen · Høstmessa', 'komite');
@@ -353,19 +400,36 @@ page_header('For komiteen · Høstmessa', 'komite');
   </div>
 
   <div class="form-layout">
-    <form method="post" action="/komite/" enctype="multipart/form-data">
+    <form method="post" action="/komite/" enctype="multipart/form-data" data-shrink>
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="save_item">
       <input type="hidden" name="id" value="<?= (int) $f['id'] ?>">
       <input type="hidden" name="MAX_FILE_SIZE" value="<?= MAX_IMAGE_BYTES ?>">
       <label class="drop" for="f-image">
         <?php if ($f['image']): ?><img class="current" src="/uploads/<?= h($f['image']) ?>" alt="Nåværende bilde"><?php endif ?>
-        <span><strong><?= $f['image'] ? 'Bytt bilde' : 'Velg bilde' ?></strong><br><span class="hint">JPG, PNG eller WebP, maks 15 MB</span></span>
+        <span><strong><?= $f['image'] ? 'Bytt hovedbilde' : 'Velg hovedbilde' ?></strong><br><span class="hint">Vises i katalogen. JPG, PNG eller WebP.</span></span>
         <input type="file" id="f-image" name="image" accept="image/jpeg,image/png,image/webp">
       </label>
       <?php if ($f['image']): ?>
-        <label class="check" for="f-remove"><input type="checkbox" id="f-remove" name="remove_image" value="1"> Fjern bildet</label>
+        <label class="check" for="f-remove"><input type="checkbox" id="f-remove" name="remove_image" value="1"> Fjern hovedbildet</label>
       <?php endif ?>
+      <?php $currentExtras = $extraImages[(int) $f['id']] ?? []; ?>
+      <fieldset class="extras">
+        <legend>Flere bilder <span class="hint">Valgfritt, maks <?= MAX_EXTRA_IMAGES ?></span></legend>
+        <?php if ($currentExtras): ?>
+          <div class="extras-list">
+            <?php foreach ($currentExtras as $extra): ?>
+              <label class="extra-thumb" for="x-<?= (int) $extra['id'] ?>">
+                <img src="/uploads/<?= h(thumb_name($extra['image'])) ?>" alt="">
+                <span class="check"><input type="checkbox" id="x-<?= (int) $extra['id'] ?>" name="remove_extra[]" value="<?= (int) $extra['id'] ?>"> Fjern</span>
+              </label>
+            <?php endforeach ?>
+          </div>
+        <?php endif ?>
+        <label for="f-extra" class="file-line">Legg til bilder
+          <input type="file" id="f-extra" name="extra_images[]" accept="image/jpeg,image/png,image/webp" multiple>
+        </label>
+      </fieldset>
       <label for="f-title">Hva er varen?
         <input type="text" id="f-title" name="title" maxlength="150" value="<?= h($f['title']) ?>" placeholder="F.eks. Strikket barnelue" required>
       </label>
@@ -401,7 +465,7 @@ page_header('For komiteen · Høstmessa', 'komite');
         <?php if (!$items): ?><p class="small-note">Ingen varer ennå.</p><?php endif ?>
         <?php foreach ($items as $item): ?>
           <div class="qitem small">
-            <div class="photo"><?= photo_html($item) ?></div>
+            <div class="photo"><?= photo_html($item) ?><?php if ($n = count($extraImages[(int) $item['id']] ?? [])): ?><span class="lot">+<?= $n ?></span><?php endif ?></div>
             <div>
               <h3><?= h(lot_no((int) $item['lot'])) ?> · <?= h($item['title']) ?></h3>
               <p><?= h($item['category']) ?> · minstepris <?= h(kr($item['min_price'] === null ? null : (int) $item['min_price'])) ?></p>
@@ -471,6 +535,7 @@ page_header('For komiteen · Høstmessa', 'komite');
   <?php endif ?>
 </section>
 <script src="/assets/galleri-opplasting.js" defer></script>
+<script src="/assets/skaler-bilder.js" defer></script>
 
 <section class="section" id="kategorier">
   <div class="form-layout">

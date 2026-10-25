@@ -207,3 +207,21 @@ textarea.tall { min-height: 260px; }
 @media (prefers-reduced-motion: reduce) { .gallery-item img { transition: none; } .gallery-item:hover img { transform: none; } }
 .lede.prose p:last-child, .sub.prose p:last-child { margin-bottom: 0; }
 .lede.prose, .sub.prose { font-size: inherit; }
+
+/* Flere bilder per vare */
+.more-photos { position: absolute; bottom: 10px; right: 10px; background: rgba(0, 0, 0, .6); color: #ffffff; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.dlg-photos { position: relative; display: flex; flex-direction: column; align-items: stretch; background: var(--ill-a); }
+.dlg-photo-main { flex: 1; display: grid; place-items: center; min-height: 260px; overflow: hidden; }
+.dlg-photo-main img { width: 100%; height: 100%; max-height: 70vh; object-fit: contain; }
+.dlg-photos .lb-nav { top: calc(50% - 40px); }
+.dlg-thumbs { display: flex; gap: 6px; padding: 8px; overflow-x: auto; background: var(--surface); }
+.dlg-thumbs button { flex: none; width: 56px; height: 56px; padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; cursor: pointer; background: none; }
+.dlg-thumbs button[aria-current="true"] { border-color: var(--rowan); }
+.dlg-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.extras { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 10px; margin: 0; min-width: 0; }
+.extras legend { font-weight: 600; font-size: 14px; padding: 0 4px; }
+.extras-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.extra-thumb { display: grid; gap: 4px; width: 88px; font-weight: 400; }
+.extra-thumb img { width: 88px; height: 66px; object-fit: cover; border-radius: 6px; }
+.extra-thumb .check { font-size: 13px; gap: 4px; }
+.file-line { font-weight: 400; }
