@@ -3,7 +3,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/layout.php';
 
-$items = db()->query('SELECT id, lot, title, description, category, min_price, giver, image FROM items ORDER BY lot')->fetchAll();
+$items = db()->query('SELECT id, lot, title, description, category, min_price, giver, image, crop FROM items ORDER BY lot')->fetchAll();
 $extraImages = extra_images();
 $gallery = db()->query('SELECT image, caption FROM gallery ORDER BY id')->fetchAll();
 $usedCategories = array_values(array_filter(categories(), fn ($c) => in_array($c, array_column($items, 'category'), true)));

@@ -40,7 +40,7 @@
   function finish(saved, errors) {
     const done = document.createElement('form');
     done.method = 'post';
-    done.action = '/komite/';
+    done.action = form.action;
     const fields = [['csrf', csrf], ['action', 'gallery_done'], ['saved', String(saved)], ...errors.map((e) => ['errors[]', e])];
     for (const [name, value] of fields) {
       const el = document.createElement('input');
@@ -68,7 +68,7 @@
       data.append('action', 'upload_gallery');
       for (const file of batch) data.append('images[]', await shrink(file));
       try {
-        const res = await fetch('/komite/', { method: 'POST', body: data, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const res = await fetch(form.action, { method: 'POST', body: data, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const json = await res.json();
         saved += json.saved;
         errors.push(...json.errors);

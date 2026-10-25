@@ -114,7 +114,7 @@ function send_password_link(array $user, bool $welcome): void
     $link = site_url('/komite/?passord=' . $token);
     if ($welcome) {
         $subject = 'Velkommen til messekomiteen på Høstmessa';
-        $body = "Hei {$user['name']}!\n\nDu er lagt til som komitémedlem på nettsiden til Høstmessa. Der kan du legge ut varer til auksjonen og oppdatere informasjonen om messa.\n\nLag ditt eget passord her (lenken virker i 7 dager):\n$link\n\nDu logger inn med denne e-postadressen: {$user['email']}\n\nHilsen messekomiteen";
+        $body = "Hei {$user['name']}!\n\nDu er lagt til som bruker på komitésiden til Høstmessa. Der kan du legge ut varer og bilder til auksjonen.\n\nLag ditt eget passord her (lenken virker i 7 dager):\n$link\n\nDu logger inn med denne e-postadressen: {$user['email']}\n\nHilsen messekomiteen";
     } else {
         $subject = 'Nytt passord til Høstmessa';
         $body = "Hei {$user['name']}!\n\nNoen (forhåpentligvis du) har bedt om å lage nytt passord til komitésiden på Høstmessa.\n\nLag nytt passord her (lenken virker i 1 time):\n$link\n\nHar du ikke bedt om dette, kan du se bort fra e-posten. Passordet ditt er ikke endret.\n\nHilsen messekomiteen";

@@ -6,7 +6,11 @@ const PLACEHOLDER_SVG = '<svg class="placeholder" viewBox="0 0 24 24" fill="none
 function photo_html(array $item): string
 {
     if (!empty($item['image'])) {
-        return '<img src="/uploads/' . h($item['image']) . '" alt="" loading="lazy">';
+        $src = $item['image'];
+        if (!empty($item['crop']) && is_file(upload_dir() . '/' . card_name($src))) {
+            $src = card_name($src);
+        }
+        return '<img src="/uploads/' . h($src) . '" alt="" loading="lazy">';
     }
     return PLACEHOLDER_SVG;
 }

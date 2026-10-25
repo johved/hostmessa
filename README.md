@@ -6,7 +6,7 @@ Nettside for Høstmessa, som arrangeres av Lindesnes KFUK-KFUM hver høst.
 - **Auksjon** (`/auksjon/`): katalog over varene som selges på auksjonen, med flere bilder per vare, søk og kategorifilter, og et bildegalleri for varer som ikke er beskrevet i katalogen.
 - **Basar** (`/basar/`): informasjon om basaren.
 - **Historie** (`/historie/`): messens historie.
-- **For komiteen** (`/komite/`): innlogging for messekomiteen. Her legger komiteen ut, endrer og fjerner varer, laster opp mange galleribilder på en gang, lager kategorier, oppdaterer messeinfo (dato, sted, tider), skriver teksten på forsiden, basarsiden og historiesiden, og administrerer hvem som er med i komiteen. Bare komiteen kan endre noe på siden.
+- **For komiteen** (`/komite/`): innlogging og egne undersider for utvalgte varer (med beskjæring av hovedbildet), bildegalleri, kategorier, messeinfo, sidetekster, brukere og eget passord. Et galleribilde kan gjøres om til en utvalgt vare. Det finnes to brukergrupper: **administratorer** kan endre alt, mens **bidragsytere** kan legge ut varer og galleribilder og endre det de har lagt ut selv. Brukere som fantes før brukergruppene kom, er administratorer.
 
 Løsningen kjører som tre Docker-containere:
 
@@ -60,7 +60,7 @@ Siden er nå tilgjengelig på hjemmenettet på `http://<NAS-ens IP>:8080` og, n�
 
 ### 6. Første innlogging
 
-Gå til `/komite/`, logg inn med `ADMIN_EMAIL` og `ADMIN_PASSWORD`, og bytt passord nederst på siden. Legg deretter til resten av komiteen under **Komitémedlemmer**.
+Gå til `/komite/`, logg inn med `ADMIN_EMAIL` og `ADMIN_PASSWORD`, og bytt passord nederst på siden. Legg deretter til resten av komiteen under **Brukere**.
 
 ### 7. E-post (glemt passord og nye medlemmer)
 
@@ -74,7 +74,7 @@ Nettsiden sender e-post via Brevo (eller en annen SMTP-tjeneste) når noen har g
    - `SMTP_PASSWORD`: SMTP-nøkkelen
    - `MAIL_FROM`: avsenderadressen du la til i Brevo
 4. Stopp og start prosjektet i Container Manager, slik at de nye innstillingene leses inn.
-5. Logg inn på `/komite/` og trykk **Send test-e-post til meg** under Komitémedlemmer.
+5. Logg inn på `/komite/` og trykk **Send test-e-post til meg** under Brukere.
 
 Når e-post er satt opp, vises **Glemt passord?** på innloggingssiden. Lenken i e-posten virker i 1 time. Legger du til et medlem og lar passordfeltet stå tomt, får medlemmet en e-post og lager passordet selv (lenken virker i 7 dager).
 
@@ -111,7 +111,7 @@ docker compose up --build web db
 Struktur:
 
 - `public/`: det Apache serverer. `index.php` er forsiden, `auksjon/`, `basar/`, `historie/` og `komite/` er de andre sidene.
-- `src/`: delt PHP-kode (database, innlogging, bildehåndtering) og sidemal.
+- `src/`: delt PHP-kode (database, innlogging, bildehåndtering), sidemal og `komite.php` med alt komitésidene lagrer.
 - `db/init.sql`: tabellene. Kjøres automatisk første gang databasen opprettes.
 - `docker/`: konfigurasjon for PHP og Apache.
 

@@ -5,7 +5,7 @@ require __DIR__ . '/../src/layout.php';
 
 $m = messe();
 $count = (int) db()->query('SELECT COUNT(*) FROM items')->fetchColumn();
-$highlights = db()->query('SELECT lot, title, category, image FROM items WHERE image IS NOT NULL ORDER BY RAND() LIMIT 4')->fetchAll();
+$highlights = db()->query('SELECT lot, title, category, image, crop FROM items WHERE image IS NOT NULL ORDER BY RAND() LIMIT 4')->fetchAll();
 
 page_header('Høstmessa ' . $m['aar'], 'forside');
 ?>

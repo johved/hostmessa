@@ -68,6 +68,10 @@ function ensure_schema(PDO $pdo): void
         caption    VARCHAR(150) NOT NULL DEFAULT '',
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Brukergrupper og beskjæring kom senere. De som fantes fra før, er administratorer.
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'admin'");
+    $pdo->exec("ALTER TABLE items ADD COLUMN IF NOT EXISTS crop VARCHAR(60) NULL");
+    $pdo->exec("ALTER TABLE gallery ADD COLUMN IF NOT EXISTS created_by INT UNSIGNED NULL");
     $pdo->exec("CREATE TABLE IF NOT EXISTS pages (
         slug       VARCHAR(30) PRIMARY KEY,
         body       MEDIUMTEXT NOT NULL,
@@ -86,7 +90,7 @@ function ensure_first_user(PDO $pdo): void
     if ($email === '' || $password === '') {
         return;
     }
-    $stmt = $pdo->prepare('INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)');
+    $stmt = $pdo->prepare("INSERT INTO users (email, name, password_hash, role) VALUES (?, ?, ?, 'admin')");
     $stmt->execute([$email, env('ADMIN_NAME', 'Administrator'), password_hash($password, PASSWORD_DEFAULT)]);
 }
 
@@ -203,6 +207,24 @@ function redirect(string $to): never
     exit;
 }
 
+// Administratorer kan endre alt. Bidragsytere kan legge ut varer og galleribilder,
+// og endre eller fjerne det de har lagt ut selv.
+const ROLES = [
+    'admin' => ['Administrator', 'Kan endre alt, også messeinfo, sidetekster, kategorier og brukere.'],
+    'bidragsyter' => ['Bidragsyter', 'Kan legge ut varer og galleribilder, og endre det de har lagt ut selv.'],
+];
+
+function is_admin(?array $user): bool
+{
+    return ($user['role'] ?? '') === 'admin';
+}
+
+// Kan brukeren endre noe som er lagt ut av $createdBy?
+function can_edit(array $user, $createdBy): bool
+{
+    return is_admin($user) || ($createdBy !== null && (int) $createdBy === (int) $user['id']);
+}
+
 function current_user(): ?array
 {
     static $user = false;
@@ -210,7 +232,7 @@ function current_user(): ?array
         start_session();
         $user = null;
         if (!empty($_SESSION['user_id'])) {
-            $stmt = db()->prepare('SELECT id, email, name FROM users WHERE id = ?');
+            $stmt = db()->prepare('SELECT id, email, name, role FROM users WHERE id = ?');
             $stmt->execute([$_SESSION['user_id']]);
             $user = $stmt->fetch() ?: null;
         }
@@ -331,7 +353,47 @@ function delete_image(?string $name): void
     if ($name && preg_match('/^[a-f0-9]{32}\.jpg$/', $name)) {
         @unlink(upload_dir() . '/' . $name);
         @unlink(upload_dir() . '/' . thumb_name($name));
+        @unlink(upload_dir() . '/' . card_name($name));
     }
+}
+
+// Utsnittet som vises på kortene i katalogen, lagret som <navn>-k.jpg.
+function card_name(string $name): string
+{
+    return substr($name, 0, -4) . '-k.jpg';
+}
+
+// Leser «x,y,b,h» (andeler av bildet, 0–1) fra skjemaet. Returnerer null for ugyldige verdier.
+function parse_crop(string $value): ?string
+{
+    $parts = explode(',', $value);
+    if (count($parts) !== 4) {
+        return null;
+    }
+    [$x, $y, $w, $h] = array_map('floatval', $parts);
+    if ($w < 0.05 || $h < 0.05 || $x < 0 || $y < 0 || $x + $w > 1.001 || $y + $h > 1.001) {
+        return null;
+    }
+    return implode(',', array_map(fn ($v) => number_format(min(1, $v), 4, '.', ''), [$x, $y, $w, $h]));
+}
+
+function make_card_image(string $name, ?string $crop): void
+{
+    $path = upload_dir() . '/' . card_name($name);
+    @unlink($path);
+    if ($crop === null || !($src = @imagecreatefromjpeg(upload_dir() . '/' . $name))) {
+        return;
+    }
+    [$x, $y, $w, $h] = array_map('floatval', explode(',', $crop));
+    $sw = max(1, (int) round($w * imagesx($src)));
+    $sh = max(1, (int) round($h * imagesy($src)));
+    $sx = min((int) round($x * imagesx($src)), imagesx($src) - $sw);
+    $sy = min((int) round($y * imagesy($src)), imagesy($src) - $sh);
+    $dw = min(800, $sw);
+    $dh = max(1, (int) round($dw * $sh / $sw));
+    $dst = imagecreatetruecolor($dw, $dh);
+    imagecopyresampled($dst, $src, 0, 0, max(0, $sx), max(0, $sy), $dw, $dh, $sw, $sh);
+    imagejpeg($dst, $path, 82);
 }
 
 // Gjør om $_FILES['felt'] med flere filer til en liste med én fil per element.
