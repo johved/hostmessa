@@ -105,6 +105,25 @@ if ($action === 'delete_item') {
     redirect('/komite/');
 }
 
+if ($action === 'save_settings') {
+    $stmt = db()->prepare('INSERT INTO settings (name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)');
+    foreach (array_keys(SETTINGS) as $key) {
+        $stmt->execute([$key, mb_substr(trim((string) ($_POST[$key] ?? '')), 0, 200)]);
+    }
+    flash('ok', 'Messeinfoen er oppdatert.');
+    redirect('/komite/#innhold');
+}
+
+if ($action === 'save_page') {
+    $slug = (string) ($_POST['slug'] ?? '');
+    if (isset(PAGES[$slug])) {
+        db()->prepare('INSERT INTO pages (slug, body) VALUES (?, ?) ON DUPLICATE KEY UPDATE body = VALUES(body)')
+            ->execute([$slug, trim((string) ($_POST['body'] ?? ''))]);
+        flash('ok', sprintf('%s er oppdatert.', PAGES[$slug]['title']));
+    }
+    redirect('/komite/#side-' . $slug);
+}
+
 if ($action === 'add_user') {
     $name = trim((string) ($_POST['name'] ?? ''));
     $email = strtolower(trim((string) ($_POST['email'] ?? '')));
@@ -194,7 +213,15 @@ $f = $edit ?? ['id' => 0, 'title' => '', 'description' => '', 'category' => CATE
 
 page_header('For komiteen · Høstmessa', 'komite');
 ?>
-<section>
+<nav class="subnav" aria-label="Komitésiden">
+  <a href="#varer">Varer</a>
+  <a href="#innhold">Messeinfo</a>
+  <a href="#side-forside">Forside</a>
+  <a href="#side-historie">Historie</a>
+  <a href="#medlemmer">Medlemmer</a>
+  <a href="#passord">Bytt passord</a>
+</nav>
+<section id="varer">
   <div class="admin-head">
     <div>
       <?php if ($edit): ?>
@@ -276,6 +303,47 @@ page_header('For komiteen · Høstmessa', 'komite');
     </div>
   </div>
 </section>
+
+<section class="section" id="innhold">
+  <h2>Messeinfo</h2>
+  <p class="sub">Vises på forsiden og øverst på alle sider. Tomme felt skjules.</p>
+  <form method="post" action="/komite/" class="login">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save_settings">
+    <?php foreach (SETTINGS as $key => [$label]): ?>
+      <label for="s-<?= $key ?>"><?= h($label) ?>
+        <input type="text" id="s-<?= $key ?>" name="<?= $key ?>" maxlength="200" value="<?= h(messe()[$key]) ?>">
+      </label>
+    <?php endforeach ?>
+    <button class="btn green" type="submit">Lagre messeinfo</button>
+  </form>
+</section>
+
+<?php foreach (PAGES as $slug => $pageInfo): ?>
+<section class="section" id="side-<?= $slug ?>">
+  <div class="form-layout">
+    <form method="post" action="/komite/">
+      <h2><?= h($pageInfo['title']) ?></h2>
+      <p class="sub">Teksten på <a href="<?= $slug === 'forside' ? '/' : '/' . $slug . '/' ?>"><?= $slug === 'forside' ? 'forsiden' : 'historiesiden' ?></a>.</p>
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="save_page">
+      <input type="hidden" name="slug" value="<?= $slug ?>">
+      <label for="page-<?= $slug ?>">Tekst
+        <textarea class="tall" id="page-<?= $slug ?>" name="body"><?= h(page_body($slug)['body']) ?></textarea>
+      </label>
+      <button class="btn green" type="submit">Lagre <?= h(mb_strtolower($pageInfo['title'])) ?></button>
+    </form>
+    <div class="help">
+      <strong>Formatering</strong>
+      <p>Tom linje mellom avsnitt.<br>
+      <code>## Overskrift</code> på egen linje.<br>
+      <code>- punkt</code> for punktliste.<br>
+      <code>**fet tekst**</code><br>
+      <code>[lenketekst](https://adresse.no)</code></p>
+    </div>
+  </div>
+</section>
+<?php endforeach ?>
 
 <section class="section" id="medlemmer">
   <div class="form-layout">

@@ -31,3 +31,14 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   INDEX idx_ip (ip, attempted_at),
   INDEX idx_email (email, attempted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS settings (
+  name  VARCHAR(50) PRIMARY KEY,
+  value TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pages (
+  slug       VARCHAR(30) PRIMARY KEY,
+  body       MEDIUMTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

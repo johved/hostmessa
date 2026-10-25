@@ -1,9 +1,11 @@
 # Høstmessa
 
-Nettside for KFUK-KFUM Lindesnes sin høstmesse, med en auksjonskatalog over varene som selges på auksjonen.
+Nettside for Høstmessa, som arrangeres av KFUK-KFUM Lindesnes hver høst.
 
-- **Katalog** (`/`): åpen for alle. Varer med bilde, varenummer, minstepris og giver, med søk og kategorifilter.
-- **For komiteen** (`/komite/`): innlogging for messekomiteen. Her legger komiteen ut, endrer og fjerner varer, og administrerer hvem som er med i komiteen. Bare komiteen kan legge varer i katalogen.
+- **Forside** (`/`): informasjon om årets messe og noen smakebiter fra auksjonen.
+- **Auksjon** (`/auksjon/`): katalog over varene som selges på auksjonen, med søk og kategorifilter.
+- **Historie** (`/historie/`): messens historie.
+- **For komiteen** (`/komite/`): innlogging for messekomiteen. Her legger komiteen ut, endrer og fjerner varer, oppdaterer messeinfo (dato, sted, tider), skriver teksten på forsiden og historiesiden, og administrerer hvem som er med i komiteen. Bare komiteen kan endre noe på siden.
 
 Løsningen kjører som tre Docker-containere:
 
@@ -35,7 +37,7 @@ Kopier `.env.example` til `.env` i samme mappe og fyll inn verdiene. Filen kan r
 
 - `DB_PASSWORD` og `DB_ROOT_PASSWORD`: lange, tilfeldige passord. Du trenger ikke huske dem.
 - `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`: det første komitémedlemmet. Brukeren opprettes automatisk første gang siden åpnes. Logg inn og bytt passord etterpå.
-- `MESSE_*`, `AUKSJON_TID`, `VAREFRIST`, `KONTAKT`: informasjonen som vises øverst på siden. Tomme felt skjules.
+- `MESSE_*`, `AUKSJON_TID`, `VAREFRIST`, `KONTAKT`: startverdier for messeinfoen. Når komiteen har lagret messeinfo på komitésiden, brukes den i stedet.
 - `CLOUDFLARE_TUNNEL_TOKEN`: se neste steg.
 
 `.env` inneholder passord og skal aldri legges i Git.
@@ -45,7 +47,7 @@ Kopier `.env.example` til `.env` i samme mappe og fyll inn verdiene. Filen kan r
 1. Lag en gratis konto på [cloudflare.com](https://dash.cloudflare.com) og legg til domenet. Høstmessa.no skrives `xn--hstmessa-54a.no` i DNS-systemet, og det er den formen Cloudflare kan be om.
 2. Bytt navnetjenere hos domeneregistraren til de to Cloudflare oppgir. Det kan ta noen timer før det slår gjennom.
 3. Gå til **Zero Trust → Networks → Tunnels → Create a tunnel**, velg **Cloudflared**, gi den et navn og kopier tokenet (den lange teksten etter `--token`) inn i `CLOUDFLARE_TUNNEL_TOKEN` i `.env`.
-4. Under **Public Hostname**: velg domenet, la subdomenet stå tomt, og sett **Service** til `HTTP` og `web:80`.
+4. Under **Public Hostname**: velg domenet, la subdomenet stå tomt, og sett **Service** til `http://web:80` (ikke `localhost`, som Cloudflare foreslår). Cloudflare lager da DNS-oppføringen for domenet automatisk.
 
 ### 5. Start prosjektet
 
@@ -72,7 +74,11 @@ Ta så backup av `docker/hostmessa/data` med **Hyper Backup**. Juster `/volume1`
 
 ## Oppdatere nettsiden
 
-Last opp de nye filene til `docker/hostmessa` (ikke overskriv `.env` eller `data/`), og velg **Bygg** på prosjektet i Container Manager.
+Koden i `public/` og `src/` leses rett fra NAS-mappen. Last opp de endrede filene til `docker/hostmessa` i File Station (ikke overskriv `.env` eller `data/`), og last siden på nytt i nettleseren. Det trengs ingen ny bygging.
+
+Bare endringer i `Dockerfile`, `docker/` eller `docker-compose.yml` krever at du velger **Bygg** på prosjektet i Container Manager. Varer, bilder og tekster ligger i `data/` og blir værende.
+
+Nye tabeller i databasen opprettes automatisk første gang siden lastes etter en oppdatering.
 
 ## Utvikling
 
@@ -87,7 +93,7 @@ docker compose up --build web db
 
 Struktur:
 
-- `public/`: det Apache serverer. `index.php` er katalogen, `komite/index.php` er komiteens side.
+- `public/`: det Apache serverer. `index.php` er forsiden, `auksjon/`, `historie/` og `komite/` er de andre sidene.
 - `src/`: delt PHP-kode (database, innlogging, bildehåndtering) og sidemal.
 - `db/init.sql`: tabellene. Kjøres automatisk første gang databasen opprettes.
 - `docker/`: konfigurasjon for PHP og Apache.

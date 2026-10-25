@@ -11,6 +11,9 @@ services:
     ports:
       - "8080:80"   # Siden på hjemmenettet: http://<NAS-ens IP>:8080
     volumes:
+      # Koden leses rett fra NAS-mappen, så endringer i public/ og src/ vises uten ny bygging.
+      - ./public:/var/www/public
+      - ./src:/var/www/src
       - ./data/uploads:/var/www/public/uploads
     depends_on:
       db:

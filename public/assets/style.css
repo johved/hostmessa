@@ -146,3 +146,38 @@ nav.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; }
 .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
 .small-note { color: var(--muted); font-size: 14px; margin: 0; }
 .btn { text-decoration: none; display: inline-block; }
+
+/* Toppfelt og meny */
+header.site .wrap { padding-block: 20px 14px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 14px; color: var(--fg); text-decoration: none; }
+.logo { height: 60px; width: auto; flex: none; background: #ffffff; border-radius: 6px; padding: 4px; }
+.brand-text { display: flex; flex-direction: column; }
+.brand-name { font-family: var(--font-display); font-size: 1.6rem; line-height: 1.1; }
+.brand-date { color: var(--muted); font-weight: 600; font-size: 15px; }
+.tab-end { margin-left: auto; }
+
+/* Sidetopper */
+.page-hero { display: flex; flex-wrap: wrap; gap: 20px 40px; align-items: end; justify-content: space-between; margin-bottom: 28px; }
+.page-hero h1, .home h1, .prose-page h1 { margin-top: 0; }
+
+/* Forside */
+.home { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+@media (max-width: 760px) { .home { grid-template-columns: 1fr; } }
+.info-card { background: var(--forest-soft); border-radius: var(--radius); padding: 22px 24px; display: grid; gap: 16px; }
+.info-card h2 { margin: 0; font-size: 1.3rem; }
+.info-card .btn { justify-self: stretch; text-align: center; }
+a.card { text-decoration: none; }
+
+/* Tekst som komiteen skriver */
+.prose { max-width: 65ch; font-size: 1.05rem; }
+.prose h2 { font-size: 1.35rem; margin: 1.4em 0 .4em; }
+.prose p, .prose ul { margin: 0 0 1em; }
+.prose ul { padding-left: 1.2em; }
+.prose-page { max-width: 760px; }
+
+/* Komitésiden */
+.subnav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.subnav a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--fg); background: var(--surface); font-size: 14px; }
+.help { font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.help code { font-size: 13px; }
+textarea.tall { min-height: 260px; }

@@ -38,9 +38,25 @@ function db(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);
+        ensure_schema($pdo);
         ensure_first_user($pdo);
     }
     return $pdo;
+}
+
+// Tabeller som er lagt til etter første versjon. db/init.sql dekker nye installasjoner,
+// dette oppgraderer databaser som allerede finnes.
+function ensure_schema(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS settings (
+        name  VARCHAR(50) PRIMARY KEY,
+        value TEXT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pages (
+        slug       VARCHAR(30) PRIMARY KEY,
+        body       MEDIUMTEXT NOT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 // Oppretter første komitémedlem fra .env så lenge brukertabellen er tom.
@@ -250,14 +266,73 @@ function delete_image(?string $name): void
     }
 }
 
+// Messeinfo som komiteen kan endre. Feltene i .env brukes til de er lagret fra komitésiden.
+const SETTINGS = [
+    'aar' => ['Årstall', 'MESSE_AAR'],
+    'dato' => ['Dato', 'MESSE_DATO'],
+    'apningstid' => ['Åpningstid', 'MESSE_TID'],
+    'sted' => ['Sted', 'MESSE_STED'],
+    'auksjon_tid' => ['Auksjonen starter', 'AUKSJON_TID'],
+    'varefrist' => ['Frist for å gi varer', 'VAREFRIST'],
+    'kontakt' => ['Kontakt', 'KONTAKT'],
+];
+
 function messe(): array
 {
-    return [
-        'aar' => env('MESSE_AAR', date('Y')),
-        'dato' => env('MESSE_DATO'),
-        'sted' => env('MESSE_STED'),
-        'tid' => env('AUKSJON_TID'),
-        'frist' => env('VAREFRIST'),
-        'kontakt' => env('KONTAKT', 'messekomiteen'),
-    ];
+    static $values = null;
+    if ($values === null) {
+        $saved = db()->query('SELECT name, value FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);
+        $values = [];
+        foreach (SETTINGS as $key => [, $envKey]) {
+            $values[$key] = $saved[$key] ?? env($envKey);
+        }
+        $values['aar'] = $values['aar'] ?: date('Y');
+        $values['kontakt'] = $values['kontakt'] ?: 'messekomiteen';
+    }
+    return $values;
+}
+
+const PAGES = [
+    'forside' => [
+        'title' => 'Forside',
+        'default' => "Velkommen til Høstmessa, KFUK-KFUM Lindesnes sin store dugnad hver høst.\n\nDenne teksten er et utgangspunkt. Komiteen kan skrive om program, kafé, aktiviteter og annet under «For komiteen».",
+    ],
+    'historie' => [
+        'title' => 'Messens historie',
+        'default' => "Her kommer historien om Høstmessa. Komiteen kan skrive den under «For komiteen».",
+    ],
+];
+
+function page_body(string $slug): array
+{
+    $stmt = db()->prepare('SELECT body, updated_at FROM pages WHERE slug = ?');
+    $stmt->execute([$slug]);
+    return $stmt->fetch() ?: ['body' => PAGES[$slug]['default'], 'updated_at' => null];
+}
+
+// Enkel og trygg formatering: tom linje gir nytt avsnitt, «## » gir overskrift,
+// «- » gir punktliste, **fet** og [lenketekst](https://...).
+function format_text(string $text): string
+{
+    $inline = function (string $s): string {
+        $s = h($s);
+        $s = preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $s);
+        return preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/u', '<a href="$2">$1</a>', $s);
+    };
+    $html = '';
+    foreach (preg_split('/\R\s*\R/u', trim(str_replace("\r", '', $text))) as $block) {
+        $lines = explode("\n", trim($block));
+        if (str_starts_with($lines[0], '## ')) {
+            $html .= '<h2>' . $inline(substr(array_shift($lines), 3)) . '</h2>';
+            if (!$lines) {
+                continue;
+            }
+        }
+        if (array_filter($lines, fn ($l) => str_starts_with($l, '- ')) === $lines) {
+            $html .= '<ul>' . implode('', array_map(fn ($l) => '<li>' . $inline(substr($l, 2)) . '</li>', $lines)) . '</ul>';
+        } else {
+            $html .= '<p>' . implode('<br>', array_map($inline, $lines)) . '</p>';
+        }
+    }
+    return $html;
 }

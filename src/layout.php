@@ -24,26 +24,24 @@ function page_header(string $title, string $active): void
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" href="/assets/kfuk-kfum-logo.svg" type="image/svg+xml">
 </head>
 <body>
-<header class="top">
+<header class="site">
   <div class="wrap">
-    <div>
-      <div class="org">KFUK-KFUM Lindesnes</div>
-      <h1>Høstmessa <?= h($m['aar']) ?><br>Auksjonskatalog</h1>
-      <p class="lede">Se hva som kommer under hammeren på messa. Har du noe å gi til auksjonen? Ta kontakt med <?= h($m['kontakt']) ?>, så legger de varen inn i katalogen.</p>
-    </div>
-    <dl class="facts">
-      <?php foreach (['Dato' => $m['dato'], 'Sted' => $m['sted'], 'Auksjon' => $m['tid'], 'Frist for varer' => $m['frist']] as $label => $value): ?>
-        <?php if ($value !== ''): ?><dt><?= h($label) ?></dt><dd><?= h($value) ?></dd><?php endif ?>
-      <?php endforeach ?>
-    </dl>
+    <a class="brand" href="/">
+      <img class="logo" src="/assets/kfuk-kfum-logo.svg" alt="KFUK-KFUM">
+      <span class="brand-text"><span class="org">KFUK-KFUM Lindesnes</span>
+      <span class="brand-name">Høstmessa <?= h($m['aar']) ?></span></span>
+    </a>
+    <?php if ($m['dato'] !== ''): ?><span class="brand-date"><?= h($m['dato']) ?><?= $m['sted'] !== '' ? ' · ' . h($m['sted']) : '' ?></span><?php endif ?>
   </div>
 </header>
-<nav class="tabs" aria-label="Seksjoner">
+<nav class="tabs" aria-label="Meny">
   <div class="wrap">
-    <a class="tab" href="/"<?= $active === 'katalog' ? ' aria-current="page"' : '' ?>>Katalog</a>
-    <a class="tab" href="/komite/"<?= $active === 'komite' ? ' aria-current="page"' : '' ?>>For komiteen</a>
+    <?php foreach (['forside' => ['/', 'Forside'], 'auksjon' => ['/auksjon/', 'Auksjon'], 'historie' => ['/historie/', 'Historie'], 'komite' => ['/komite/', 'For komiteen']] as $key => [$href, $label]): ?>
+      <a class="tab<?= $key === 'komite' ? ' tab-end' : '' ?>" href="<?= $href ?>"<?= $active === $key ? ' aria-current="page"' : '' ?>><?= $label ?></a>
+    <?php endforeach ?>
   </div>
 </nav>
 <main>
@@ -54,12 +52,25 @@ function page_header(string $title, string $active): void
 <?php
 }
 
+// Messeinfo som definisjonsliste. Tomme felt hoppes over.
+function facts_html(array $keys): string
+{
+    $m = messe();
+    $html = '';
+    foreach ($keys as $key) {
+        if ($m[$key] !== '') {
+            $html .= '<dt>' . h(SETTINGS[$key][0]) . '</dt><dd>' . h($m[$key]) . '</dd>';
+        }
+    }
+    return $html === '' ? '' : '<dl class="facts">' . $html . '</dl>';
+}
+
 function page_footer(): void
 {
     ?>
   </div>
 </main>
-<footer><div class="wrap">Høstmessa er KFUK-KFUM Lindesnes sin store dugnad hver høst. Spørsmål om auksjonen: kontakt <?= h(messe()['kontakt']) ?>.</div></footer>
+<footer><div class="wrap">Høstmessa er KFUK-KFUM Lindesnes sin store dugnad hver høst. Spørsmål? Kontakt <?= h(messe()['kontakt']) ?>.</div></footer>
 </body>
 </html>
 <?php
