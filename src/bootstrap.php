@@ -272,6 +272,7 @@ const SETTINGS = [
     'dato' => ['Dato', 'MESSE_DATO'],
     'apningstid' => ['Åpningstid', 'MESSE_TID'],
     'sted' => ['Sted', 'MESSE_STED'],
+    'adresse' => ['Adresse for kartlenken', 'MESSE_ADRESSE'],
     'auksjon_tid' => ['Auksjonen starter', 'AUKSJON_TID'],
     'varefrist' => ['Frist for å gi varer', 'VAREFRIST'],
     'kontakt' => ['Kontakt', 'KONTAKT'],

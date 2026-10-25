@@ -64,7 +64,7 @@ function facts_html(array $keys): string
     $html = '';
     foreach ($keys as $key) {
         if ($m[$key] !== '') {
-            $value = $key === 'sted' ? '<a href="' . h(maps_url($m[$key])) . '" target="_blank" rel="noopener">' . h($m[$key]) . '</a>' : h($m[$key]);
+            $value = $key === 'sted' ? '<a href="' . h(maps_url($m['adresse'] ?: $m[$key])) . '" target="_blank" rel="noopener">' . h($m[$key]) . '</a>' : h($m[$key]);
             $html .= '<dt>' . h(SETTINGS[$key][0]) . '</dt><dd>' . $value . '</dd>';
         }
     }
