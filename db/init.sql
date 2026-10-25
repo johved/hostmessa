@@ -1,0 +1,33 @@
+-- Kjøres automatisk av MariaDB-containeren første gang databasen opprettes.
+
+CREATE TABLE IF NOT EXISTS users (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email         VARCHAR(190) NOT NULL UNIQUE,
+  name          VARCHAR(100) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS items (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  lot         INT UNSIGNED NOT NULL UNIQUE,
+  title       VARCHAR(150) NOT NULL,
+  description TEXT NOT NULL,
+  category    VARCHAR(50) NOT NULL,
+  min_price   INT UNSIGNED NULL,
+  giver       VARCHAR(100) NOT NULL,
+  image       VARCHAR(100) NULL,
+  created_by  INT UNSIGNED NULL,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_items_user FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ip           VARCHAR(45) NOT NULL,
+  email        VARCHAR(190) NOT NULL,
+  attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ip (ip, attempted_at),
+  INDEX idx_email (email, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

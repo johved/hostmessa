@@ -1,12 +1,94 @@
 # Høstmessa
 
-Nettside for KFUK-KFUM Lindesnes sin høstmesse, med en auksjonskatalog der folk kan legge inn varer før messa.
+Nettside for KFUK-KFUM Lindesnes sin høstmesse, med en auksjonskatalog over varene som selges på auksjonen.
 
-## Demo
+- **Katalog** (`/`): åpen for alle. Varer med bilde, varenummer, minstepris og giver, med søk og kategorifilter.
+- **For komiteen** (`/komite/`): innlogging for messekomiteen. Her legger komiteen ut, endrer og fjerner varer, og administrerer hvem som er med i komiteen. Bare komiteen kan legge varer i katalogen.
 
-`index.html` er en demo med 10 oppdiktede varer. Den har to deler:
+Løsningen kjører som tre Docker-containere:
 
-- **Katalog:** varene med varenummer, minstepris, søk og kategorifilter. Åpen for alle.
-- **For komiteen:** innlogging for messekomiteen, som legger ut og fjerner varer. Bare komiteen kan legge varer i katalogen.
+| Container | Hva den gjør |
+|---|---|
+| `web` | PHP 8.3 med Apache. Selve nettsiden. |
+| `db` | MariaDB 11.4. Varer, komitémedlemmer og innloggingsforsøk. |
+| `tunnel` | Cloudflare Tunnel. Gjør siden tilgjengelig på høstmessa.no med HTTPS uten å åpne porter i ruteren. |
 
-Demoen har ingen server. Innloggingen er ikke ekte, og endringer lagres bare i nettleseren (localStorage). Åpne `index.html` direkte i en nettleser for å prøve den.
+Bilder og database lagres i mappen `data/` ved siden av `docker-compose.yml`.
+
+## Oppsett på Synology NAS
+
+Krever DSM 7.2 eller nyere og en modell som støtter Container Manager (for eksempel DS220+).
+
+### 1. Installer Container Manager
+
+Åpne **Pakkesenter**, søk etter **Container Manager** og installer den.
+
+### 2. Legg filene på NAS-en
+
+1. Last ned repoet som ZIP fra GitHub (**Code → Download ZIP**) og pakk det ut.
+2. Lag mappen `docker/hostmessa` i **File Station** og last opp innholdet dit, slik at `docker-compose.yml` ligger direkte i `docker/hostmessa`.
+
+### 3. Lag innstillingsfilen `.env`
+
+Kopier `.env.example` til `.env` i samme mappe og fyll inn verdiene. Filen kan redigeres med pakken **Text Editor**.
+
+- `DB_PASSWORD` og `DB_ROOT_PASSWORD`: lange, tilfeldige passord. Du trenger ikke huske dem.
+- `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`: det første komitémedlemmet. Brukeren opprettes automatisk første gang siden åpnes. Logg inn og bytt passord etterpå.
+- `MESSE_*`, `AUKSJON_TID`, `VAREFRIST`, `KONTAKT`: informasjonen som vises øverst på siden. Tomme felt skjules.
+- `CLOUDFLARE_TUNNEL_TOKEN`: se neste steg.
+
+`.env` inneholder passord og skal aldri legges i Git.
+
+### 4. Sett opp Cloudflare Tunnel
+
+1. Lag en gratis konto på [cloudflare.com](https://dash.cloudflare.com) og legg til domenet. Høstmessa.no skrives `xn--hstmessa-54a.no` i DNS-systemet, og det er den formen Cloudflare kan be om.
+2. Bytt navnetjenere hos domeneregistraren til de to Cloudflare oppgir. Det kan ta noen timer før det slår gjennom.
+3. Gå til **Zero Trust → Networks → Tunnels → Create a tunnel**, velg **Cloudflared**, gi den et navn og kopier tokenet (den lange teksten etter `--token`) inn i `CLOUDFLARE_TUNNEL_TOKEN` i `.env`.
+4. Under **Public Hostname**: velg domenet, la subdomenet stå tomt, og sett **Service** til `HTTP` og `web:80`.
+
+### 5. Start prosjektet
+
+1. Åpne **Container Manager → Prosjekt → Opprett**.
+2. Gi prosjektet navnet `hostmessa`, velg mappen `docker/hostmessa` og velg å bruke den eksisterende `docker-compose.yml`.
+3. Fullfør veiviseren. Første gang bygges nettsiden, og det tar noen minutter.
+
+Siden er nå tilgjengelig på hjemmenettet på `http://<NAS-ens IP>:8080` og, når tunnelen er oppe, på https://høstmessa.no.
+
+### 6. Første innlogging
+
+Gå til `/komite/`, logg inn med `ADMIN_EMAIL` og `ADMIN_PASSWORD`, og bytt passord nederst på siden. Legg deretter til resten av komiteen under **Komitémedlemmer**.
+
+## Backup
+
+Alt som må tas vare på ligger i `docker/hostmessa/data`. Databasefiler som kopieres mens databasen kjører, kan bli ødelagte, så ta en databasedump før backup. Legg inn en planlagt oppgave i **Kontrollpanel → Oppgaveplanlegger → Opprett → Planlagt oppgave → Brukerdefinert skript**, kjørt som `root` hver natt:
+
+```sh
+cd /volume1/docker/hostmessa && \
+/usr/local/bin/docker compose exec -T db sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" hostmessa' > data/hostmessa.sql
+```
+
+Ta så backup av `docker/hostmessa/data` med **Hyper Backup**. Juster `/volume1` hvis mappen ligger på et annet volum.
+
+## Oppdatere nettsiden
+
+Last opp de nye filene til `docker/hostmessa` (ikke overskriv `.env` eller `data/`), og velg **Bygg** på prosjektet i Container Manager.
+
+## Utvikling
+
+Siden kjøres lokalt med Docker:
+
+```sh
+cp .env.example .env   # fyll inn verdier
+docker compose up --build web db
+```
+
+Åpne http://localhost:8080. Tunnel-containeren trengs ikke lokalt.
+
+Struktur:
+
+- `public/`: det Apache serverer. `index.php` er katalogen, `komite/index.php` er komiteens side.
+- `src/`: delt PHP-kode (database, innlogging, bildehåndtering) og sidemal.
+- `db/init.sql`: tabellene. Kjøres automatisk første gang databasen opprettes.
+- `docker/`: konfigurasjon for PHP og Apache.
+
+Sikkerhet: passord lagres med `password_hash`, alle skjemaer har CSRF-token, alle databasekall bruker prepared statements, og innlogging sperres i 15 minutter etter 5 feil forsøk på samme e-post. Opplastede bilder leses inn og lagres på nytt som JPEG (uten metadata, maks 1600 px), og Apache kjører aldri kode fra bildemappen.
