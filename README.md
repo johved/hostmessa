@@ -60,7 +60,7 @@ Siden er nå tilgjengelig på hjemmenettet på `http://<NAS-ens IP>:8080` og, n�
 
 ### 6. Første innlogging
 
-Gå til `/komite/`, logg inn med `ADMIN_EMAIL` og `ADMIN_PASSWORD`, og bytt passord nederst på siden. Legg deretter til resten av komiteen under **Brukere**.
+Gå til `/komite/`, logg inn med `ADMIN_EMAIL` og `ADMIN_PASSWORD`, og bytt passord under **Mitt passord**. Legg deretter til resten av komiteen under **Brukere**.
 
 ### 7. E-post (glemt passord og nye medlemmer)
 
