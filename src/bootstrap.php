@@ -50,6 +50,12 @@ function ensure_schema(PDO $pdo): void
     if ((int) $pdo->query('SELECT COUNT(*) FROM categories')->fetchColumn() === 0) {
         $pdo->exec("INSERT IGNORE INTO categories (name) SELECT DISTINCT category FROM items WHERE category <> ''");
     }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS password_tokens (
+        token_hash CHAR(64) PRIMARY KEY,
+        user_id    INT UNSIGNED NOT NULL,
+        expires_at DATETIME NOT NULL,
+        CONSTRAINT fk_password_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->exec("CREATE TABLE IF NOT EXISTS item_images (
         id      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         item_id INT UNSIGNED NOT NULL,

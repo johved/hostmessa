@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/layout.php';
+require __DIR__ . '/../../src/mail.php';
 
 start_session();
 $action = $_POST['action'] ?? null;
@@ -22,6 +23,91 @@ if ($action === 'login') {
         flash('error', $error);
     }
     redirect('/komite/');
+}
+
+if ($action === 'forgot') {
+    $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+    if (too_many_attempts($email)) {
+        flash('error', sprintf('For mange forsøk. Vent %d minutter og prøv igjen.', LOGIN_WINDOW_MINUTES));
+        redirect('/komite/?glemt');
+    }
+    db()->prepare('INSERT INTO login_attempts (ip, email) VALUES (?, ?)')->execute([client_ip(), $email]);
+    $stmt = db()->prepare('SELECT id, name, email FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    if ($found = $stmt->fetch()) {
+        try {
+            send_password_link($found, false);
+        } catch (RuntimeException $e) {
+            error_log('Glemt passord: ' . $e->getMessage());
+            flash('error', 'E-posten kunne ikke sendes akkurat nå. Prøv igjen senere, eller kontakt en i komiteen.');
+            redirect('/komite/?glemt');
+        }
+    }
+    // Samme svar uansett, så siden ikke avslører hvilke adresser som finnes.
+    flash('ok', 'Hvis adressen tilhører et komitémedlem, har vi sendt en e-post med lenke for å lage nytt passord. Lenken virker i 1 time.');
+    redirect('/komite/');
+}
+
+if ($action === 'set_password') {
+    $token = (string) ($_POST['token'] ?? '');
+    $owner = find_password_token($token);
+    $new = (string) ($_POST['new_password'] ?? '');
+    if (!$owner) {
+        flash('error', 'Lenken er utløpt eller allerede brukt. Be om en ny under «Glemt passord».');
+        redirect('/komite/?glemt');
+    }
+    if (strlen($new) < 10) {
+        flash('error', 'Passordet må ha minst 10 tegn.');
+        redirect('/komite/?passord=' . urlencode($token));
+    }
+    if ($new !== (string) ($_POST['repeat_password'] ?? '')) {
+        flash('error', 'Passordene er ikke like.');
+        redirect('/komite/?passord=' . urlencode($token));
+    }
+    db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($new, PASSWORD_DEFAULT), $owner['id']]);
+    db()->prepare('DELETE FROM password_tokens WHERE user_id = ?')->execute([$owner['id']]);
+    db()->prepare('DELETE FROM login_attempts WHERE email = ?')->execute([$owner['email']]);
+    start_session();
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int) $owner['id'];
+    flash('ok', 'Passordet er lagret, og du er logget inn.');
+    redirect('/komite/');
+}
+
+if (isset($_GET['passord'])) {
+    $token = (string) $_GET['passord'];
+    $owner = find_password_token($token);
+    page_header('Lag passord · Høstmessa', 'komite');
+    if (!$owner) {
+        ?>
+    <section class="login">
+      <h2>Lenken virker ikke</h2>
+      <p class="sub">Lenken er utløpt eller allerede brukt. <a href="/komite/?glemt">Be om en ny lenke</a>.</p>
+    </section>
+        <?php
+    } else {
+        ?>
+    <section class="login">
+      <h2>Lag passord</h2>
+      <p class="sub">For <?= h($owner['name']) ?> (<?= h($owner['email']) ?>). Passordet må ha minst 10 tegn.</p>
+      <form method="post" action="/komite/">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="set_password">
+        <input type="hidden" name="token" value="<?= h($token) ?>">
+        <input type="text" name="username" value="<?= h($owner['email']) ?>" autocomplete="username" hidden>
+        <label for="n-password">Nytt passord
+          <input type="password" id="n-password" name="new_password" minlength="10" autocomplete="new-password" required>
+        </label>
+        <label for="n-repeat">Gjenta passordet
+          <input type="password" id="n-repeat" name="repeat_password" minlength="10" autocomplete="new-password" required>
+        </label>
+        <button class="btn green" type="submit">Lagre passord</button>
+      </form>
+    </section>
+        <?php
+    }
+    page_footer();
+    exit;
 }
 
 $user = current_user();
@@ -284,21 +370,58 @@ if ($action === 'add_user') {
     $name = trim((string) ($_POST['name'] ?? ''));
     $email = strtolower(trim((string) ($_POST['email'] ?? '')));
     $password = (string) ($_POST['password'] ?? '');
+    $invite = $password === '';
     if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         flash('error', 'Skriv inn navn og en gyldig e-postadresse.');
-    } elseif (strlen($password) < 10) {
+    } elseif ($invite && !mail_configured()) {
+        flash('error', 'E-post er ikke satt opp ennå, så du må skrive inn et midlertidig passord.');
+    } elseif (!$invite && strlen($password) < 10) {
         flash('error', 'Passordet må ha minst 10 tegn.');
     } else {
         try {
+            // Ved invitasjon får brukeren et tilfeldig passord ingen kjenner, og lager sitt eget via lenken.
             db()->prepare('INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)')
-                ->execute([$email, $name, password_hash($password, PASSWORD_DEFAULT)]);
-            flash('ok', sprintf('%s er lagt til. Gi beskjed om passordet, og be dem bytte det etter første innlogging.', $name));
+                ->execute([$email, $name, password_hash($invite ? bin2hex(random_bytes(32)) : $password, PASSWORD_DEFAULT)]);
+            if ($invite) {
+                try {
+                    send_password_link(['id' => (int) db()->lastInsertId(), 'name' => $name, 'email' => $email], true);
+                    flash('ok', sprintf('%s er lagt til og har fått en e-post med lenke for å lage passord.', $name));
+                } catch (RuntimeException $e) {
+                    flash('error', sprintf('%s er lagt til, men e-posten kunne ikke sendes: %s', $name, $e->getMessage()));
+                }
+            } else {
+                flash('ok', sprintf('%s er lagt til. Gi beskjed om passordet, og be dem bytte det etter første innlogging.', $name));
+            }
         } catch (PDOException $e) {
             if ($e->errorInfo[1] !== 1062) {
                 throw $e;
             }
             flash('error', 'Det finnes allerede et komitémedlem med den e-postadressen.');
         }
+    }
+    redirect('/komite/#medlemmer');
+}
+
+if ($action === 'invite_user') {
+    $stmt = db()->prepare('SELECT id, name, email FROM users WHERE id = ?');
+    $stmt->execute([(int) ($_POST['id'] ?? 0)]);
+    if ($member = $stmt->fetch()) {
+        try {
+            send_password_link($member, true);
+            flash('ok', sprintf('E-post med lenke for å lage passord er sendt til %s.', $member['email']));
+        } catch (RuntimeException $e) {
+            flash('error', 'E-posten kunne ikke sendes: ' . $e->getMessage());
+        }
+    }
+    redirect('/komite/#medlemmer');
+}
+
+if ($action === 'test_mail') {
+    try {
+        send_mail($user['email'], 'Test fra Høstmessa', "Hei {$user['name']}!\n\nDette er en test. E-post fra nettsiden virker.\n\nHilsen nettsiden til Høstmessa");
+        flash('ok', sprintf('Test-e-post er sendt til %s. Sjekk innboksen (og søppelposten).', $user['email']));
+    } catch (RuntimeException $e) {
+        flash('error', 'E-posten kunne ikke sendes: ' . $e->getMessage());
     }
     redirect('/komite/#medlemmer');
 }
@@ -333,6 +456,27 @@ if ($action !== null) {
     redirect('/komite/');
 }
 
+if (!$user && isset($_GET['glemt'])) {
+    page_header('Glemt passord · Høstmessa', 'komite');
+    ?>
+    <section class="login">
+      <h2>Glemt passord</h2>
+      <p class="sub">Skriv inn e-postadressen du logger inn med, så sender vi deg en lenke for å lage nytt passord.</p>
+      <form method="post" action="/komite/">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="forgot">
+        <label for="f-email">E-post
+          <input type="email" id="f-email" name="email" autocomplete="username" required>
+        </label>
+        <button class="btn green" type="submit">Send lenke</button>
+      </form>
+      <p class="small-note"><a href="/komite/">Tilbake til innlogging</a></p>
+    </section>
+    <?php
+    page_footer();
+    exit;
+}
+
 if (!$user) {
     page_header('Logg inn · Høstmessa', 'komite');
     ?>
@@ -350,6 +494,9 @@ if (!$user) {
         </label>
         <button class="btn green" type="submit">Logg inn</button>
       </form>
+      <?php if (mail_configured()): ?>
+        <p class="small-note"><a href="/komite/?glemt">Glemt passord?</a></p>
+      <?php endif ?>
     </section>
     <?php
     page_footer();
@@ -634,6 +781,14 @@ page_header('For komiteen · Høstmessa', 'komite');
             </div>
             <div class="qact">
               <?php if ((int) $u['id'] !== (int) $user['id']): ?>
+                <?php if (mail_configured()): ?>
+                  <form method="post" action="/komite/" class="inline">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="invite_user">
+                    <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                    <button class="btn ghost" type="submit" title="Send e-post med lenke for å lage passord">Send passordlenke</button>
+                  </form>
+                <?php endif ?>
                 <form method="post" action="/komite/" class="inline" onsubmit="return confirm('Fjerne <?= h(addslashes($u['name'])) ?> fra komiteen?')">
                   <?= csrf_field() ?>
                   <input type="hidden" name="action" value="delete_user">
@@ -659,11 +814,27 @@ page_header('For komiteen · Høstmessa', 'komite');
         <label for="u-email">E-post
           <input type="email" id="u-email" name="email" maxlength="190" required>
         </label>
-        <label for="u-password">Midlertidig passord <span class="hint">Minst 10 tegn</span>
-          <input type="text" id="u-password" name="password" minlength="10" autocomplete="off" required>
-        </label>
+        <?php if (mail_configured()): ?>
+          <label for="u-password">Midlertidig passord <span class="hint">Valgfritt. La stå tomt, så får de en e-post og lager passord selv.</span>
+            <input type="text" id="u-password" name="password" minlength="10" autocomplete="off">
+          </label>
+        <?php else: ?>
+          <label for="u-password">Midlertidig passord <span class="hint">Minst 10 tegn</span>
+            <input type="text" id="u-password" name="password" minlength="10" autocomplete="off" required>
+          </label>
+        <?php endif ?>
         <button class="btn green" type="submit">Legg til</button>
       </form>
+      <?php if (mail_configured()): ?>
+        <form method="post" action="/komite/" class="section">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="test_mail">
+          <p class="small-note">Sjekk at e-post fra nettsiden virker:</p>
+          <button class="btn ghost" type="submit">Send test-e-post til meg</button>
+        </form>
+      <?php else: ?>
+        <p class="small-note section">E-post er ikke satt opp. Fyll inn SMTP-innstillingene i <code>.env</code> for å kunne sende invitasjoner og «glemt passord».</p>
+      <?php endif ?>
     </div>
   </div>
 </section>

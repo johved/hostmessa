@@ -62,6 +62,22 @@ Siden er nå tilgjengelig på hjemmenettet på `http://<NAS-ens IP>:8080` og, n�
 
 Gå til `/komite/`, logg inn med `ADMIN_EMAIL` og `ADMIN_PASSWORD`, og bytt passord nederst på siden. Legg deretter til resten av komiteen under **Komitémedlemmer**.
 
+### 7. E-post (glemt passord og nye medlemmer)
+
+Nettsiden sender e-post via Brevo (eller en annen SMTP-tjeneste) når noen har glemt passordet, og når et nytt komitémedlem legges til uten passord.
+
+1. I Brevo: gå til **Senders, Domains & Dedicated IPs → Domains**, legg til domenet (`xn--hstmessa-54a.no`) og legg inn DNS-oppføringene Brevo viser (DKIM, Brevo-kode og DMARC) under **DNS** i Cloudflare. Velg **DNS only** (grå sky) på dem. Legg så til avsenderadressen under **Senders**.
+2. Gå til **SMTP & API → SMTP**. Der står SMTP-innloggingen (en adresse som slutter på `@smtp-brevo.com`). Lag en SMTP-nøkkel med **Generate a new SMTP key**.
+3. Fyll inn i `.env`:
+   - `SMTP_HOST=smtp-relay.brevo.com` og `SMTP_PORT=587`
+   - `SMTP_USER`: SMTP-innloggingen fra Brevo
+   - `SMTP_PASSWORD`: SMTP-nøkkelen
+   - `MAIL_FROM`: avsenderadressen du la til i Brevo
+4. Stopp og start prosjektet i Container Manager, slik at de nye innstillingene leses inn.
+5. Logg inn på `/komite/` og trykk **Send test-e-post til meg** under Komitémedlemmer.
+
+Når e-post er satt opp, vises **Glemt passord?** på innloggingssiden. Lenken i e-posten virker i 1 time. Legger du til et medlem og lar passordfeltet stå tomt, får medlemmet en e-post og lager passordet selv (lenken virker i 7 dager).
+
 ## Backup
 
 Alt som må tas vare på ligger i `docker/hostmessa/data`. Databasefiler som kopieres mens databasen kjører, kan bli ødelagte, så ta en databasedump før backup. Legg inn en planlagt oppgave i **Kontrollpanel → Oppgaveplanlegger → Opprett → Planlagt oppgave → Brukerdefinert skript**, kjørt som `root` hver natt:
