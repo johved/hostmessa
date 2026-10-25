@@ -1,6 +1,6 @@
 # Høstmessa
 
-Nettside for Høstmessa, som arrangeres av Lindesnes KFUK-KFUM hver høst.
+Nettside for Høstmessa, som arrangeres av Lindesnes KFUK KFUM hver høst.
 
 - **Forside** (`/`): informasjon om årets messe og noen smakebiter fra auksjonen.
 - **Auksjon** (`/auksjon/`): katalog over varene som selges på auksjonen, med søk og kategorifilter.

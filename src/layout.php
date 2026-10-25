@@ -31,7 +31,7 @@ function page_header(string $title, string $active): void
   <div class="wrap">
     <a class="brand" href="/">
       <img class="logo" src="/assets/kfuk-kfum-logo.svg" alt="KFUK-KFUM" width="26" height="40">
-      <span class="brand-text"><span class="org">Lindesnes KFUK-KFUM</span>
+      <span class="brand-text"><span class="org">Lindesnes KFUK KFUM</span>
       <span class="brand-name">Høstmessa <?= h($m['aar']) ?></span></span>
     </a>
     <?php if ($m['dato'] !== ''): ?><span class="brand-date"><?= h($m['dato']) ?><?= $m['sted'] !== '' ? ' · ' . h($m['sted']) : '' ?></span><?php endif ?>
@@ -70,7 +70,7 @@ function page_footer(): void
     ?>
   </div>
 </main>
-<footer><div class="wrap">Høstmessa er Lindesnes KFUK-KFUM sin store dugnad hver høst. Spørsmål? Kontakt <?= h(messe()['kontakt']) ?>.</div></footer>
+<footer><div class="wrap">Høstmessa er Lindesnes KFUK KFUM sin store dugnad hver høst. Spørsmål? Kontakt <?= h(messe()['kontakt']) ?>.</div></footer>
 </body>
 </html>
 <?php
