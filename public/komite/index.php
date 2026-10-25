@@ -46,8 +46,8 @@ if ($action === 'save_item') {
     $price = trim((string) ($_POST['min_price'] ?? ''));
     $minPrice = $price === '' ? null : max(0, (int) $price);
 
-    if ($title === '' || $description === '' || $giver === '' || !in_array($category, CATEGORIES, true)) {
-        flash('error', 'Fyll inn varenavn, beskrivelse, kategori og hvem som har gitt varen.');
+    if ($title === '' || $description === '' || $giver === '' || ($category !== '' && !in_array($category, categories(), true))) {
+        flash('error', 'Fyll inn varenavn, beskrivelse og hvem som har gitt varen.');
         redirect('/komite/' . ($id ? '?edit=' . $id : ''));
     }
 
@@ -103,6 +103,49 @@ if ($action === 'delete_item') {
         flash('ok', sprintf('«%s» er fjernet fra katalogen.', $item['title']));
     }
     redirect('/komite/');
+}
+
+if ($action === 'add_category') {
+    $name = mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 50);
+    if ($name === '') {
+        flash('error', 'Skriv inn et navn på kategorien.');
+    } elseif (in_array(mb_strtolower($name), array_map('mb_strtolower', categories()), true)) {
+        flash('error', sprintf('Kategorien «%s» finnes allerede.', $name));
+    } else {
+        db()->prepare('INSERT INTO categories (name) VALUES (?)')->execute([$name]);
+        flash('ok', sprintf('Kategorien «%s» er lagt til.', $name));
+    }
+    redirect('/komite/#kategorier');
+}
+
+if ($action === 'rename_category') {
+    $old = (string) ($_POST['old'] ?? '');
+    $name = mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 50);
+    $others = array_filter(categories(), fn ($c) => $c !== $old);
+    if ($name === '') {
+        flash('error', 'Kategorien må ha et navn.');
+    } elseif (in_array(mb_strtolower($name), array_map('mb_strtolower', $others), true)) {
+        flash('error', sprintf('Kategorien «%s» finnes allerede.', $name));
+    } elseif ($name !== $old) {
+        $pdo = db();
+        $pdo->beginTransaction();
+        $pdo->prepare('UPDATE categories SET name = ? WHERE name = ?')->execute([$name, $old]);
+        $pdo->prepare('UPDATE items SET category = ? WHERE category = ?')->execute([$name, $old]);
+        $pdo->commit();
+        flash('ok', sprintf('«%s» heter nå «%s».', $old, $name));
+    }
+    redirect('/komite/#kategorier');
+}
+
+if ($action === 'delete_category') {
+    $name = (string) ($_POST['name'] ?? '');
+    $pdo = db();
+    $pdo->beginTransaction();
+    $pdo->prepare('UPDATE items SET category = \'\' WHERE category = ?')->execute([$name]);
+    $pdo->prepare('DELETE FROM categories WHERE name = ?')->execute([$name]);
+    $pdo->commit();
+    flash('ok', sprintf('Kategorien «%s» er slettet. Varer i den er nå uten kategori.', $name));
+    redirect('/komite/#kategorier');
 }
 
 if ($action === 'save_settings') {
@@ -209,12 +252,13 @@ if (isset($_GET['edit'])) {
     $stmt->execute([(int) $_GET['edit']]);
     $edit = $stmt->fetch() ?: null;
 }
-$f = $edit ?? ['id' => 0, 'title' => '', 'description' => '', 'category' => CATEGORIES[0], 'min_price' => null, 'giver' => '', 'image' => null];
+$f = $edit ?? ['id' => 0, 'title' => '', 'description' => '', 'category' => '', 'min_price' => null, 'giver' => '', 'image' => null];
 
 page_header('For komiteen · Høstmessa', 'komite');
 ?>
 <nav class="subnav" aria-label="Komitésiden">
   <a href="#varer">Varer</a>
+  <a href="#kategorier">Kategorier</a>
   <a href="#innhold">Messeinfo</a>
   <?php foreach (PAGES as $slug => $pageInfo): ?>
     <a href="#side-<?= $slug ?>"><?= h($pageInfo['title']) ?></a>
@@ -263,10 +307,15 @@ page_header('For komiteen · Høstmessa', 'komite');
       <div class="row2">
         <label for="f-category">Kategori
           <select id="f-category" name="category">
-            <?php foreach (CATEGORIES as $cat): ?>
+            <option value="">Uten kategori</option>
+            <?php foreach (categories() as $cat): ?>
               <option<?= $cat === $f['category'] ? ' selected' : '' ?>><?= h($cat) ?></option>
             <?php endforeach ?>
+            <?php if ($f['category'] !== '' && !in_array($f['category'], categories(), true)): ?>
+              <option selected><?= h($f['category']) ?></option>
+            <?php endif ?>
           </select>
+          <span class="hint"><a href="#kategorier">Lag eller endre kategorier</a></span>
         </label>
         <label for="f-price">Minstepris (kr) <span class="hint">Valgfritt</span>
           <input type="number" id="f-price" name="min_price" min="0" step="50" inputmode="numeric" value="<?= h($f['min_price'] === null ? '' : (string) $f['min_price']) ?>">
@@ -301,6 +350,49 @@ page_header('For komiteen · Høstmessa', 'komite');
           </div>
         <?php endforeach ?>
       </div>
+    </div>
+  </div>
+</section>
+
+<?php $categoryCounts = db()->query("SELECT category, COUNT(*) FROM items WHERE category <> '' GROUP BY category")->fetchAll(PDO::FETCH_KEY_PAIR); ?>
+<section class="section" id="kategorier">
+  <div class="form-layout">
+    <div>
+      <h2>Kategorier</h2>
+      <p class="sub">Kategoriene varene sorteres etter i auksjonskatalogen. Bare kategorier som har varer, vises i katalogen.</p>
+      <div class="queue">
+        <?php if (!categories()): ?><p class="small-note">Ingen kategorier ennå.</p><?php endif ?>
+        <?php foreach (categories() as $cat): ?>
+          <div class="qitem small cat-row">
+            <form method="post" action="/komite/" class="cat-rename">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="rename_category">
+              <input type="hidden" name="old" value="<?= h($cat) ?>">
+              <input type="text" name="name" maxlength="50" value="<?= h($cat) ?>" aria-label="Navn på kategorien <?= h($cat) ?>" required>
+              <button class="btn ghost" type="submit">Lagre</button>
+            </form>
+            <?php $n = (int) ($categoryCounts[$cat] ?? 0); ?>
+            <span class="small-note"><?= $n ?> <?= $n === 1 ? 'vare' : 'varer' ?></span>
+            <form method="post" action="/komite/" class="inline" onsubmit="return confirm('Slette kategorien «<?= h(addslashes($cat)) ?>»?<?= !empty($categoryCounts[$cat]) ? ' Varene i den blir uten kategori.' : '' ?>')">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="delete_category">
+              <input type="hidden" name="name" value="<?= h($cat) ?>">
+              <button class="btn ghost" type="submit">Slett</button>
+            </form>
+          </div>
+        <?php endforeach ?>
+      </div>
+    </div>
+    <div>
+      <h3 class="list-h">Ny kategori</h3>
+      <form method="post" action="/komite/">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="add_category">
+        <label for="c-name">Navn
+          <input type="text" id="c-name" name="name" maxlength="50" placeholder="F.eks. Håndarbeid" required>
+        </label>
+        <button class="btn green" type="submit">Legg til kategori</button>
+      </form>
     </div>
   </div>
 </section>

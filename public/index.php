@@ -32,7 +32,7 @@ page_header('Høstmessa ' . $m['aar'], 'forside');
       <a class="card" href="/auksjon/">
         <div class="photo"><?= photo_html($item) ?><span class="lot"><?= h(lot_no((int) $item['lot'])) ?></span></div>
         <div class="card-body">
-          <span class="cat"><?= h($item['category']) ?></span>
+          <?php if ($item['category'] !== ''): ?><span class="cat"><?= h($item['category']) ?></span><?php endif ?>
           <h3><?= h($item['title']) ?></h3>
         </div>
       </a>

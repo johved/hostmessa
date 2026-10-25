@@ -1,16 +1,6 @@
 <?php
 declare(strict_types=1);
 
-const CATEGORIES = [
-    'Håndarbeid',
-    'Mat og bakst',
-    'Antikk og interiør',
-    'Kunst',
-    'Opplevelser',
-    'Barn og leker',
-    'Diverse',
-];
-
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGE_SIDE = 1600;
 const LOGIN_WINDOW_MINUTES = 15;
@@ -52,6 +42,14 @@ function ensure_schema(PDO $pdo): void
         name  VARCHAR(50) PRIMARY KEY,
         value TEXT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS categories (
+        id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(50) NOT NULL UNIQUE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Kategoriene var faste i koden før. Ta med de som allerede er i bruk.
+    if ((int) $pdo->query('SELECT COUNT(*) FROM categories')->fetchColumn() === 0) {
+        $pdo->exec("INSERT IGNORE INTO categories (name) SELECT DISTINCT category FROM items WHERE category <> ''");
+    }
     $pdo->exec("CREATE TABLE IF NOT EXISTS pages (
         slug       VARCHAR(30) PRIMARY KEY,
         body       MEDIUMTEXT NOT NULL,
@@ -72,6 +70,12 @@ function ensure_first_user(PDO $pdo): void
     }
     $stmt = $pdo->prepare('INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)');
     $stmt->execute([$email, env('ADMIN_NAME', 'Administrator'), password_hash($password, PASSWORD_DEFAULT)]);
+}
+
+// Kategoriene komiteen har laget, alfabetisk.
+function categories(): array
+{
+    return db()->query('SELECT name FROM categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 }
 
 function h(?string $s): string

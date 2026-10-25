@@ -4,7 +4,7 @@ require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/layout.php';
 
 $items = db()->query('SELECT lot, title, description, category, min_price, giver, image FROM items ORDER BY lot')->fetchAll();
-$usedCategories = array_values(array_filter(CATEGORIES, fn ($c) => in_array($c, array_column($items, 'category'), true)));
+$usedCategories = array_values(array_filter(categories(), fn ($c) => in_array($c, array_column($items, 'category'), true)));
 
 page_header('Auksjon · Høstmessa', 'auksjon');
 ?>
@@ -39,7 +39,7 @@ page_header('Auksjon · Høstmessa', 'auksjon');
           data-giver="<?= h($item['giver']) ?>">
           <div class="photo"><?= photo_html($item) ?><span class="lot"><?= h(lot_no((int) $item['lot'])) ?></span></div>
           <div class="card-body">
-            <span class="cat"><?= h($item['category']) ?></span>
+            <?php if ($item['category'] !== ''): ?><span class="cat"><?= h($item['category']) ?></span><?php endif ?>
             <h3><?= h($item['title']) ?></h3>
             <div class="meta"><span>Minstepris</span><strong><?= h(kr($item['min_price'] === null ? null : (int) $item['min_price'])) ?></strong></div>
           </div>

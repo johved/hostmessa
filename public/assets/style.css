@@ -181,3 +181,6 @@ a.card { text-decoration: none; }
 .help { font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
 .help code { font-size: 13px; }
 textarea.tall { min-height: 260px; }
+.qitem.cat-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+.cat-rename { display: flex; gap: 8px; min-width: 0; }
+.cat-rename input { min-width: 0; }
