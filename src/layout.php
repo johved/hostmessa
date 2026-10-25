@@ -31,8 +31,8 @@ function page_header(string $title, string $active): void
   <div class="wrap">
     <a class="brand" href="/">
       <img class="logo" src="/assets/kfuk-kfum-logo.svg" alt="KFUK-KFUM" width="26" height="40">
-      <span class="brand-text"><span class="org">Lindesnes KFUK KFUM</span>
-      <span class="brand-name">Høstmessa <?= h($m['aar']) ?></span></span>
+      <span class="brand-text"><span class="org">Lindesnes KFUK-KFUM</span>
+      <span class="brand-name">Høstmessa</span></span>
     </a>
     <?php if ($m['dato'] !== ''): ?><span class="brand-date"><?= h($m['dato']) ?><?= $m['sted'] !== '' ? ' · ' . h($m['sted']) : '' ?></span><?php endif ?>
   </div>
@@ -52,6 +52,11 @@ function page_header(string $title, string $active): void
 <?php
 }
 
+function maps_url(string $place): string
+{
+    return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($place);
+}
+
 // Messeinfo som definisjonsliste. Tomme felt hoppes over.
 function facts_html(array $keys): string
 {
@@ -59,7 +64,8 @@ function facts_html(array $keys): string
     $html = '';
     foreach ($keys as $key) {
         if ($m[$key] !== '') {
-            $html .= '<dt>' . h(SETTINGS[$key][0]) . '</dt><dd>' . h($m[$key]) . '</dd>';
+            $value = $key === 'sted' ? '<a href="' . h(maps_url($m[$key])) . '" target="_blank" rel="noopener">' . h($m[$key]) . '</a>' : h($m[$key]);
+            $html .= '<dt>' . h(SETTINGS[$key][0]) . '</dt><dd>' . $value . '</dd>';
         }
     }
     return $html === '' ? '' : '<dl class="facts">' . $html . '</dl>';
@@ -70,7 +76,7 @@ function page_footer(): void
     ?>
   </div>
 </main>
-<footer><div class="wrap">Høstmessa er Lindesnes KFUK KFUM sin store dugnad hver høst. Spørsmål? Kontakt <?= h(messe()['kontakt']) ?>.</div></footer>
+<footer><div class="wrap">Høstmessa er Lindesnes KFUK-KFUM sin store dugnad hver høst. Spørsmål? Kontakt <?= h(messe()['kontakt']) ?>.</div></footer>
 </body>
 </html>
 <?php

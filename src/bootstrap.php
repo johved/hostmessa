@@ -295,7 +295,7 @@ function messe(): array
 const PAGES = [
     'forside' => [
         'title' => 'Forside',
-        'default' => "Velkommen til Høstmessa, Lindesnes KFUK KFUM sin store dugnad hver høst.\n\nDenne teksten er et utgangspunkt. Komiteen kan skrive om program, kafé, aktiviteter og annet under «For komiteen».",
+        'default' => "Velkommen til Høstmessa, Lindesnes KFUK-KFUM sin store dugnad hver høst.\n\nDenne teksten er et utgangspunkt. Komiteen kan skrive om program, kafé, aktiviteter og annet under «For komiteen».",
     ],
     'historie' => [
         'title' => 'Messens historie',
