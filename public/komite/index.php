@@ -534,7 +534,7 @@ page_header('For komiteen · Høstmessa', 'komite');
   <div class="form-layout">
     <form method="post" action="/komite/">
       <h2><?= h($pageInfo['title']) ?></h2>
-      <p class="sub"><a href="<?= $slug === 'forside' ? '/' : '/' . $slug . '/' ?>">Se siden</a></p>
+      <p class="sub"><a href="<?= h($pageInfo['url'] ?? ($slug === 'forside' ? '/' : '/' . $slug . '/')) ?>">Se siden</a></p>
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="save_page">
       <input type="hidden" name="slug" value="<?= $slug ?>">

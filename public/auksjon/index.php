@@ -12,7 +12,7 @@ page_header('Auksjon · Høstmessa', 'auksjon');
 <section class="page-hero">
   <div>
     <h1>Auksjonskatalog</h1>
-    <p class="lede">Se hva som kommer under hammeren på messa. Har du noe å gi til auksjonen? Ta kontakt med <?= h(messe()['kontakt']) ?>, så legger de varen inn i katalogen.</p>
+    <div class="lede prose"><?= format_text(page_body('auksjon')['body']) ?></div>
   </div>
   <?= facts_html(['auksjon_tid', 'varefrist']) ?>
 </section>
@@ -54,7 +54,7 @@ page_header('Auksjon · Høstmessa', 'auksjon');
 <?php if ($gallery): ?>
 <section class="section" id="galleri">
   <h2>Flere varer på auksjonen</h2>
-  <p class="sub">Disse varene kommer også under hammeren, men er ikke beskrevet i katalogen. Trykk på et bilde for å se det større.</p>
+  <div class="sub prose"><?= format_text(page_body('auksjon-galleri')['body']) ?></div>
   <div class="gallery" id="gallery">
     <?php foreach ($gallery as $i => $g): ?>
       <button class="gallery-item" type="button" data-index="<?= $i ?>" data-full="/uploads/<?= h($g['image']) ?>" data-caption="<?= h($g['caption']) ?>">

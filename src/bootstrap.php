@@ -346,6 +346,16 @@ const PAGES = [
         'title' => 'Forside',
         'default' => "Velkommen til Høstmessa, Lindesnes KFUK-KFUM sin store dugnad hver høst.\n\nDenne teksten er et utgangspunkt. Komiteen kan skrive om program, kafé, aktiviteter og annet under «For komiteen».",
     ],
+    'auksjon' => [
+        'title' => 'Auksjon',
+        'url' => '/auksjon/',
+        'default' => "Se hva som kommer under hammeren på messa. Har du noe å gi til auksjonen? Ta kontakt med messekomiteen, så legger de varen inn i katalogen.",
+    ],
+    'auksjon-galleri' => [
+        'title' => 'Auksjon: bildegalleri',
+        'url' => '/auksjon/#galleri',
+        'default' => "Disse varene kommer også under hammeren, men er ikke beskrevet i katalogen. Trykk på et bilde for å se det større.",
+    ],
     'basar' => [
         'title' => 'Basar',
         'default' => "Her kommer informasjon om basaren. Komiteen kan skrive den under «For komiteen».",

@@ -205,3 +205,5 @@ textarea.tall { min-height: 260px; }
 .gallery-admin-item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; }
 .gallery-admin-item .btn { padding: 8px 12px; }
 @media (prefers-reduced-motion: reduce) { .gallery-item img { transition: none; } .gallery-item:hover img { transform: none; } }
+.lede.prose p:last-child, .sub.prose p:last-child { margin-bottom: 0; }
+.lede.prose, .sub.prose { font-size: inherit; }
