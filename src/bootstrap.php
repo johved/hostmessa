@@ -270,7 +270,7 @@ function delete_image(?string $name): void
 const SETTINGS = [
     'aar' => ['Årstall', 'MESSE_AAR'],
     'dato' => ['Dato', 'MESSE_DATO'],
-    'apningstid' => ['Åpningstid', 'MESSE_TID'],
+    'apningstid' => ['Dørene åpner', 'MESSE_TID'],
     'sted' => ['Sted', 'MESSE_STED'],
     'adresse' => ['Adresse for kartlenken', 'MESSE_ADRESSE'],
     'auksjon_tid' => ['Auksjonen starter', 'AUKSJON_TID'],
