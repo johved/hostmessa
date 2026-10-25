@@ -216,8 +216,9 @@ page_header('For komiteen · Høstmessa', 'komite');
 <nav class="subnav" aria-label="Komitésiden">
   <a href="#varer">Varer</a>
   <a href="#innhold">Messeinfo</a>
-  <a href="#side-forside">Forside</a>
-  <a href="#side-historie">Historie</a>
+  <?php foreach (PAGES as $slug => $pageInfo): ?>
+    <a href="#side-<?= $slug ?>"><?= h($pageInfo['title']) ?></a>
+  <?php endforeach ?>
   <a href="#medlemmer">Medlemmer</a>
   <a href="#passord">Bytt passord</a>
 </nav>
@@ -324,7 +325,7 @@ page_header('For komiteen · Høstmessa', 'komite');
   <div class="form-layout">
     <form method="post" action="/komite/">
       <h2><?= h($pageInfo['title']) ?></h2>
-      <p class="sub">Teksten på <a href="<?= $slug === 'forside' ? '/' : '/' . $slug . '/' ?>"><?= $slug === 'forside' ? 'forsiden' : 'historiesiden' ?></a>.</p>
+      <p class="sub"><a href="<?= $slug === 'forside' ? '/' : '/' . $slug . '/' ?>">Se siden</a></p>
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="save_page">
       <input type="hidden" name="slug" value="<?= $slug ?>">

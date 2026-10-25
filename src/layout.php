@@ -39,7 +39,7 @@ function page_header(string $title, string $active): void
 </header>
 <nav class="tabs" aria-label="Meny">
   <div class="wrap">
-    <?php foreach (['forside' => ['/', 'Forside'], 'auksjon' => ['/auksjon/', 'Auksjon'], 'historie' => ['/historie/', 'Historie'], 'komite' => ['/komite/', 'For komiteen']] as $key => [$href, $label]): ?>
+    <?php foreach (['forside' => ['/', 'Forside'], 'auksjon' => ['/auksjon/', 'Auksjon'], 'basar' => ['/basar/', 'Basar'], 'historie' => ['/historie/', 'Historie'], 'komite' => ['/komite/', 'For komiteen']] as $key => [$href, $label]): ?>
       <a class="tab<?= $key === 'komite' ? ' tab-end' : '' ?>" href="<?= $href ?>"<?= $active === $key ? ' aria-current="page"' : '' ?>><?= $label ?></a>
     <?php endforeach ?>
   </div>
@@ -55,6 +55,24 @@ function page_header(string $title, string $active): void
 function maps_url(string $place): string
 {
     return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($place);
+}
+
+// Side med tekst som komiteen skriver (basar, historie).
+function text_page(string $slug): void
+{
+    $page = page_body($slug);
+    $title = PAGES[$slug]['title'];
+    page_header($title . ' · Høstmessa', $slug);
+    ?>
+<article class="prose-page">
+  <h1><?= h($title) ?></h1>
+  <div class="prose"><?= format_text($page['body']) ?></div>
+  <?php if ($page['updated_at']): ?>
+    <p class="small-note">Sist oppdatert <?= h(date('j.n.Y', strtotime($page['updated_at']))) ?></p>
+  <?php endif ?>
+</article>
+<?php
+    page_footer();
 }
 
 // Messeinfo som definisjonsliste. Tomme felt hoppes over.

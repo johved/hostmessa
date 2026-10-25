@@ -4,8 +4,9 @@ Nettside for Høstmessa, som arrangeres av Lindesnes KFUK-KFUM hver høst.
 
 - **Forside** (`/`): informasjon om årets messe og noen smakebiter fra auksjonen.
 - **Auksjon** (`/auksjon/`): katalog over varene som selges på auksjonen, med søk og kategorifilter.
+- **Basar** (`/basar/`): informasjon om basaren.
 - **Historie** (`/historie/`): messens historie.
-- **For komiteen** (`/komite/`): innlogging for messekomiteen. Her legger komiteen ut, endrer og fjerner varer, oppdaterer messeinfo (dato, sted, tider), skriver teksten på forsiden og historiesiden, og administrerer hvem som er med i komiteen. Bare komiteen kan endre noe på siden.
+- **For komiteen** (`/komite/`): innlogging for messekomiteen. Her legger komiteen ut, endrer og fjerner varer, oppdaterer messeinfo (dato, sted, tider), skriver teksten på forsiden, basarsiden og historiesiden, og administrerer hvem som er med i komiteen. Bare komiteen kan endre noe på siden.
 
 Løsningen kjører som tre Docker-containere:
 
@@ -93,7 +94,7 @@ docker compose up --build web db
 
 Struktur:
 
-- `public/`: det Apache serverer. `index.php` er forsiden, `auksjon/`, `historie/` og `komite/` er de andre sidene.
+- `public/`: det Apache serverer. `index.php` er forsiden, `auksjon/`, `basar/`, `historie/` og `komite/` er de andre sidene.
 - `src/`: delt PHP-kode (database, innlogging, bildehåndtering) og sidemal.
 - `db/init.sql`: tabellene. Kjøres automatisk første gang databasen opprettes.
 - `docker/`: konfigurasjon for PHP og Apache.
