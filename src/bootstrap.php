@@ -50,6 +50,12 @@ function ensure_schema(PDO $pdo): void
     if ((int) $pdo->query('SELECT COUNT(*) FROM categories')->fetchColumn() === 0) {
         $pdo->exec("INSERT IGNORE INTO categories (name) SELECT DISTINCT category FROM items WHERE category <> ''");
     }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS gallery (
+        id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        image      VARCHAR(100) NOT NULL,
+        caption    VARCHAR(150) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->exec("CREATE TABLE IF NOT EXISTS pages (
         slug       VARCHAR(30) PRIMARY KEY,
         body       MEDIUMTEXT NOT NULL,
@@ -263,11 +269,49 @@ function save_uploaded_image(array $file): string
     return $name;
 }
 
+// Lager et lite forhåndsbilde (for galleriet) ved siden av et lagret bilde.
+function make_thumbnail(string $name, int $side = 480): void
+{
+    $src = @imagecreatefromjpeg(upload_dir() . '/' . $name);
+    if (!$src) {
+        return;
+    }
+    $w = imagesx($src);
+    $h = imagesy($src);
+    $scale = min(1, $side / max($w, $h));
+    $dst = imagecreatetruecolor(max(1, (int) round($w * $scale)), max(1, (int) round($h * $scale)));
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, imagesx($dst), imagesy($dst), $w, $h);
+    imagejpeg($dst, upload_dir() . '/' . thumb_name($name), 78);
+}
+
+function thumb_name(string $name): string
+{
+    return substr($name, 0, -4) . '-t.jpg';
+}
+
+// Sletter et opplastet bilde og forhåndsbildet, hvis det finnes.
 function delete_image(?string $name): void
 {
     if ($name && preg_match('/^[a-f0-9]{32}\.jpg$/', $name)) {
         @unlink(upload_dir() . '/' . $name);
+        @unlink(upload_dir() . '/' . thumb_name($name));
     }
+}
+
+// Gjør om $_FILES['felt'] med flere filer til en liste med én fil per element.
+function uploaded_files(string $field): array
+{
+    $f = $_FILES[$field] ?? null;
+    if (!$f || !is_array($f['name'])) {
+        return [];
+    }
+    $files = [];
+    foreach (array_keys($f['name']) as $i) {
+        if ($f['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+            $files[] = ['name' => $f['name'][$i], 'tmp_name' => $f['tmp_name'][$i], 'error' => $f['error'][$i], 'size' => $f['size'][$i]];
+        }
+    }
+    return $files;
 }
 
 // Messeinfo som komiteen kan endre. Feltene i .env brukes til de er lagret fra komitésiden.

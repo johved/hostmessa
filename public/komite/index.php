@@ -105,6 +105,73 @@ if ($action === 'delete_item') {
     redirect('/komite/');
 }
 
+if ($action === 'upload_gallery') {
+    $saved = 0;
+    $errors = [];
+    $stmt = db()->prepare('INSERT INTO gallery (image) VALUES (?)');
+    foreach (uploaded_files('images') as $file) {
+        try {
+            $name = save_uploaded_image($file);
+            make_thumbnail($name);
+            $stmt->execute([$name]);
+            $saved++;
+        } catch (RuntimeException $e) {
+            $errors[] = $file['name'] . ': ' . $e->getMessage();
+        }
+    }
+    // Nettleseren laster opp i små porsjoner og vil ha svaret som JSON.
+    if (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json') {
+        header('Content-Type: application/json');
+        echo json_encode(['saved' => $saved, 'errors' => $errors]);
+        exit;
+    }
+    if ($saved) {
+        flash('ok', sprintf('%d %s lagt til i galleriet.', $saved, $saved === 1 ? 'bilde er' : 'bilder er'));
+    }
+    foreach ($errors as $error) {
+        flash('error', $error);
+    }
+    if (!$saved && !$errors) {
+        flash('error', 'Velg ett eller flere bilder først.');
+    }
+    redirect('/komite/#galleri');
+}
+
+if ($action === 'gallery_done') {
+    $saved = (int) ($_POST['saved'] ?? 0);
+    flash('ok', sprintf('%d %s lagt til i galleriet.', $saved, $saved === 1 ? 'bilde er' : 'bilder er'));
+    foreach (array_slice((array) ($_POST['errors'] ?? []), 0, 20) as $error) {
+        flash('error', (string) $error);
+    }
+    redirect('/komite/#galleri');
+}
+
+if ($action === 'caption_gallery') {
+    db()->prepare('UPDATE gallery SET caption = ? WHERE id = ?')
+        ->execute([mb_substr(trim((string) ($_POST['caption'] ?? '')), 0, 150), (int) ($_POST['id'] ?? 0)]);
+    flash('ok', 'Bildeteksten er lagret.');
+    redirect('/komite/#galleri');
+}
+
+if ($action === 'delete_gallery') {
+    $stmt = db()->prepare('SELECT image FROM gallery WHERE id = ?');
+    $stmt->execute([(int) ($_POST['id'] ?? 0)]);
+    if ($image = $stmt->fetchColumn()) {
+        db()->prepare('DELETE FROM gallery WHERE id = ?')->execute([(int) $_POST['id']]);
+        delete_image($image);
+        flash('ok', 'Bildet er fjernet fra galleriet.');
+    }
+    redirect('/komite/#galleri');
+}
+
+if ($action === 'clear_gallery') {
+    $images = db()->query('SELECT image FROM gallery')->fetchAll(PDO::FETCH_COLUMN);
+    db()->exec('DELETE FROM gallery');
+    array_map('delete_image', $images);
+    flash('ok', sprintf('Galleriet er tømt (%d bilder fjernet).', count($images)));
+    redirect('/komite/#galleri');
+}
+
 if ($action === 'add_category') {
     $name = mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 50);
     if ($name === '') {
@@ -258,6 +325,7 @@ page_header('For komiteen · Høstmessa', 'komite');
 ?>
 <nav class="subnav" aria-label="Komitésiden">
   <a href="#varer">Varer</a>
+  <a href="#galleri">Bildegalleri</a>
   <a href="#kategorier">Kategorier</a>
   <a href="#innhold">Messeinfo</a>
   <?php foreach (PAGES as $slug => $pageInfo): ?>
@@ -355,6 +423,55 @@ page_header('For komiteen · Høstmessa', 'komite');
 </section>
 
 <?php $categoryCounts = db()->query("SELECT category, COUNT(*) FROM items WHERE category <> '' GROUP BY category")->fetchAll(PDO::FETCH_KEY_PAIR); ?>
+<?php $gallery = db()->query('SELECT id, image, caption FROM gallery ORDER BY id')->fetchAll(); ?>
+<section class="section" id="galleri">
+  <div class="admin-head">
+    <div>
+      <h2>Bildegalleri <span class="count"><?= count($gallery) ?></span></h2>
+      <p class="sub">For varer som kommer på auksjonen, men som ikke er beskrevet i katalogen. Velg mange bilder på en gang. De vises under katalogen på auksjonssiden. Bildetekst er valgfritt.</p>
+    </div>
+    <?php if ($gallery): ?>
+      <form method="post" action="/komite/" onsubmit="return confirm('Fjerne alle <?= count($gallery) ?> bildene fra galleriet? Dette kan ikke angres.')">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="clear_gallery">
+        <button class="btn ghost" type="submit">Tøm galleriet</button>
+      </form>
+    <?php endif ?>
+  </div>
+  <form method="post" action="/komite/" enctype="multipart/form-data" id="gallery-form" class="gallery-upload">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="upload_gallery">
+    <label class="drop" for="g-images">
+      <span><strong>Velg bilder</strong><br><span class="hint" id="g-status">Du kan velge mange på en gang. JPG, PNG eller WebP.</span></span>
+      <input type="file" id="g-images" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
+    </label>
+    <button class="btn" type="submit" id="g-submit">Last opp til galleriet</button>
+  </form>
+  <?php if ($gallery): ?>
+    <div class="gallery-admin">
+      <?php foreach ($gallery as $g): ?>
+        <div class="gallery-admin-item">
+          <img src="/uploads/<?= h(thumb_name($g['image'])) ?>" alt="" loading="lazy">
+          <form method="post" action="/komite/" class="cat-rename">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="caption_gallery">
+            <input type="hidden" name="id" value="<?= (int) $g['id'] ?>">
+            <input type="text" name="caption" maxlength="150" value="<?= h($g['caption']) ?>" placeholder="Bildetekst" aria-label="Bildetekst">
+            <button class="btn ghost" type="submit">Lagre</button>
+          </form>
+          <form method="post" action="/komite/" onsubmit="return confirm('Fjerne bildet fra galleriet?')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="delete_gallery">
+            <input type="hidden" name="id" value="<?= (int) $g['id'] ?>">
+            <button class="btn ghost" type="submit">Fjern</button>
+          </form>
+        </div>
+      <?php endforeach ?>
+    </div>
+  <?php endif ?>
+</section>
+<script src="/assets/galleri-opplasting.js" defer></script>
+
 <section class="section" id="kategorier">
   <div class="form-layout">
     <div>

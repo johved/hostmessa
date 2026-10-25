@@ -4,6 +4,7 @@ require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/layout.php';
 
 $items = db()->query('SELECT lot, title, description, category, min_price, giver, image FROM items ORDER BY lot')->fetchAll();
+$gallery = db()->query('SELECT image, caption FROM gallery ORDER BY id')->fetchAll();
 $usedCategories = array_values(array_filter(categories(), fn ($c) => in_array($c, array_column($items, 'category'), true)));
 
 page_header('Auksjon · Høstmessa', 'auksjon');
@@ -16,9 +17,9 @@ page_header('Auksjon · Høstmessa', 'auksjon');
   <?= facts_html(['auksjon_tid', 'varefrist']) ?>
 </section>
 <section>
-  <?php if (!$items): ?>
+  <?php if (!$items && !$gallery): ?>
     <p class="empty">Katalogen fylles opp etter hvert som komiteen legger inn varer. Kom gjerne tilbake senere.</p>
-  <?php else: ?>
+  <?php elseif ($items): ?>
     <div class="tools">
       <input class="search" id="search" type="search" placeholder="Søk etter varer, f.eks. «genser» eller «hytte»" aria-label="Søk i katalogen">
       <div class="chips" id="chips">
@@ -49,6 +50,32 @@ page_header('Auksjon · Høstmessa', 'auksjon');
     <p class="empty" id="empty" hidden>Ingen varer passer søket ditt.</p>
   <?php endif ?>
 </section>
+
+<?php if ($gallery): ?>
+<section class="section" id="galleri">
+  <h2>Flere varer på auksjonen</h2>
+  <p class="sub">Disse varene kommer også under hammeren, men er ikke beskrevet i katalogen. Trykk på et bilde for å se det større.</p>
+  <div class="gallery" id="gallery">
+    <?php foreach ($gallery as $i => $g): ?>
+      <button class="gallery-item" type="button" data-index="<?= $i ?>" data-full="/uploads/<?= h($g['image']) ?>" data-caption="<?= h($g['caption']) ?>">
+        <img src="/uploads/<?= h(thumb_name($g['image'])) ?>" alt="<?= h($g['caption']) ?>" loading="lazy">
+        <?php if ($g['caption'] !== ''): ?><span class="gallery-caption"><?= h($g['caption']) ?></span><?php endif ?>
+      </button>
+    <?php endforeach ?>
+  </div>
+</section>
+
+<dialog id="lightbox" class="lightbox" aria-label="Bilde fra galleriet">
+  <button class="close" id="lb-close" type="button" aria-label="Lukk">×</button>
+  <button class="lb-nav lb-prev" id="lb-prev" type="button" aria-label="Forrige bilde">‹</button>
+  <figure>
+    <img id="lb-img" alt="">
+    <figcaption><span id="lb-caption"></span> <span class="small-note" id="lb-count"></span></figcaption>
+  </figure>
+  <button class="lb-nav lb-next" id="lb-next" type="button" aria-label="Neste bilde">›</button>
+</dialog>
+<script src="/assets/galleri.js" defer></script>
+<?php endif ?>
 
 <dialog id="dlg" aria-labelledby="dlg-title">
   <div style="position:relative">
