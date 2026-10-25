@@ -108,6 +108,12 @@ function categories(): array
     return db()->query('SELECT name FROM categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 }
 
+// Adresse til en fil i public/assets med versjon, så nettleseren og Cloudflare henter nye utgaver.
+function asset(string $file): string
+{
+    return '/assets/' . $file . '?v=' . @filemtime(dirname(__DIR__) . '/public/assets/' . $file);
+}
+
 function h(?string $s): string
 {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');

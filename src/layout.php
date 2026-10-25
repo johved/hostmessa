@@ -23,7 +23,7 @@ function page_header(string $title, string $active): void
 <title><?= h($title) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/style.css?v=<?= @filemtime(dirname(__DIR__) . '/public/assets/style.css') ?>">
+<link rel="stylesheet" href="<?= asset('style.css') ?>">
 <link rel="icon" href="/assets/kfuk-kfum-logo.svg" type="image/svg+xml">
 </head>
 <body>

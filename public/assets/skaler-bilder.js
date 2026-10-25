@@ -25,28 +25,47 @@
     });
   }
 
+  // De nedskalerte bildene legges tilbake i skjemaet, og skjemaet sendes som vanlig.
+  // Da viser nettleseren svaret fra serveren direkte, også om noe går galt.
+  function canReplaceFiles() {
+    try { return typeof DataTransfer === 'function' && !!new DataTransfer().items; } catch (err) { return false; }
+  }
+
   document.querySelectorAll('form[data-shrink]').forEach((form) => {
-    if (!window.fetch || !window.FormData) return;
+    if (!canReplaceFiles()) return;
+    let busy = false;
     form.addEventListener('submit', async (e) => {
       const inputs = Array.from(form.querySelectorAll('input[type=file]')).filter((i) => i.files.length);
       if (!inputs.length) return;
       e.preventDefault();
+      if (busy) return;
+      busy = true;
       const button = form.querySelector('button[type=submit]');
-      button.disabled = true;
-      button.textContent = 'Lagrer …';
-      const data = new FormData(form);
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Gjør klar bildene …';
+      }
+      let total = 0;
       for (const input of inputs) {
-        data.delete(input.name);
-        for (const file of input.files) data.append(input.name, await shrink(file));
+        const dt = new DataTransfer();
+        for (const file of Array.from(input.files)) {
+          const small = await shrink(file);
+          total += small.size;
+          dt.items.add(small);
+        }
+        input.files = dt.files;
       }
-      try {
-        const res = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
-        window.location.href = (await res.json()).redirect;
-      } catch (err) {
-        button.disabled = false;
-        button.textContent = 'Prøv igjen';
-        alert('Kunne ikke lagre. Sjekk nettforbindelsen og prøv igjen.');
+      if (total > 19 * 1024 * 1024) {
+        alert('Bildene er for store til å sendes på en gang. Lagre med færre bilder, og legg til resten etterpå.');
+        busy = false;
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Prøv igjen';
+        }
+        return;
       }
+      if (button) button.textContent = 'Lagrer …';
+      form.submit();
     });
   });
 })();

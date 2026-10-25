@@ -77,7 +77,7 @@ page_header('Auksjon · Høstmessa', 'auksjon');
   </figure>
   <button class="lb-nav lb-next" id="lb-next" type="button" aria-label="Neste bilde">›</button>
 </dialog>
-<script src="/assets/galleri.js" defer></script>
+<script src="<?= asset('galleri.js') ?>" defer></script>
 <?php endif ?>
 
 <dialog id="dlg" aria-labelledby="dlg-title">
@@ -106,6 +106,6 @@ page_header('Auksjon · Høstmessa', 'auksjon');
     </div>
   </div>
 </dialog>
-<script src="/assets/katalog.js" defer></script>
+<script src="<?= asset('katalog.js') ?>" defer></script>
 <?php
 page_footer();

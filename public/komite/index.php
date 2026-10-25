@@ -9,7 +9,7 @@ $action = $_POST['action'] ?? null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
     // PHP forkaster hele skjemaet når det er større enn post_max_size.
-    flash('error', 'Bildet er for stort. Maks 15 MB.');
+    flash('error', 'Bildene var for store til å sendes på en gang. Prøv med færre bilder, og legg til resten etterpå.');
     redirect('/komite/');
 }
 
@@ -681,8 +681,8 @@ page_header('For komiteen · Høstmessa', 'komite');
     </div>
   <?php endif ?>
 </section>
-<script src="/assets/galleri-opplasting.js" defer></script>
-<script src="/assets/skaler-bilder.js" defer></script>
+<script src="<?= asset('galleri-opplasting.js') ?>" defer></script>
+<script src="<?= asset('skaler-bilder.js') ?>" defer></script>
 
 <section class="section" id="kategorier">
   <div class="form-layout">
