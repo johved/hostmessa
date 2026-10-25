@@ -23,14 +23,14 @@ function page_header(string $title, string $active): void
 <title><?= h($title) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/style.css?v=<?= @filemtime(dirname(__DIR__) . '/public/assets/style.css') ?>">
 <link rel="icon" href="/assets/kfuk-kfum-logo.svg" type="image/svg+xml">
 </head>
 <body>
 <header class="site">
   <div class="wrap">
     <a class="brand" href="/">
-      <img class="logo" src="/assets/kfuk-kfum-logo.svg" alt="KFUK-KFUM">
+      <img class="logo" src="/assets/kfuk-kfum-logo.svg" alt="KFUK-KFUM" width="26" height="40">
       <span class="brand-text"><span class="org">KFUK-KFUM Lindesnes</span>
       <span class="brand-name">Høstmessa <?= h($m['aar']) ?></span></span>
     </a>
