@@ -27,6 +27,7 @@ Krever DSM 7.2 eller nyere og en modell som støtter Container Manager (for ekse
 
 1. Last ned repoet som ZIP fra GitHub (**Code → Download ZIP**) og pakk det ut.
 2. Lag mappen `docker/hostmessa` i **File Station** og last opp innholdet dit, slik at `docker-compose.yml` ligger direkte i `docker/hostmessa`.
+3. Lag mappen `data` inne i `docker/hostmessa`, og inne i den de tomme mappene `db` og `uploads`. Container Manager lager ikke disse selv, og uten dem stopper oppstarten med en feil om at mappen ikke finnes.
 
 ### 3. Lag innstillingsfilen `.env`
 
