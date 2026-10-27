@@ -6,6 +6,8 @@
   const input = document.getElementById('g-images');
   const status = document.getElementById('g-status');
   const submit = document.getElementById('g-submit');
+  // form.action peker på feltet som heter «action», ikke på adressen.
+  const endpoint = form.getAttribute('action');
   const csrf = form.querySelector('input[name="csrf"]').value;
   const MAX_SIDE = 1600;
   const BATCH = 6;
@@ -40,7 +42,7 @@
   function finish(saved, errors) {
     const done = document.createElement('form');
     done.method = 'post';
-    done.action = form.action;
+    done.action = endpoint;
     const fields = [['csrf', csrf], ['action', 'gallery_done'], ['saved', String(saved)], ...errors.map((e) => ['errors[]', e])];
     for (const [name, value] of fields) {
       const el = document.createElement('input');
@@ -68,7 +70,7 @@
       data.append('action', 'upload_gallery');
       for (const file of batch) data.append('images[]', await shrink(file));
       try {
-        const res = await fetch(form.action, { method: 'POST', body: data, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const res = await fetch(endpoint, { method: 'POST', body: data, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const json = await res.json();
         saved += json.saved;
         errors.push(...json.errors);

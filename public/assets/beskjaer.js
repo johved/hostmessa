@@ -41,7 +41,11 @@
     y = (nh - w / RATIO) / 2;
   }
 
+  // Load-hendelsen kan komme etter at bildet allerede er «complete», så hvert bilde settes opp bare én gang.
+  let readyFor = null;
   function setup() {
+    if (readyFor === img.src) return;
+    readyFor = img.src;
     nw = img.naturalWidth;
     nh = img.naturalHeight;
     if (!nw || !nh) return;

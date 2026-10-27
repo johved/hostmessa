@@ -3,6 +3,8 @@
 (() => {
   document.querySelectorAll('form.page-image').forEach((form) => {
     if (!window.fetch || !window.FormData) return;
+    // form.action peker på feltet som heter «action», ikke på adressen.
+    const url = form.getAttribute('action');
     const textarea = document.getElementById(form.dataset.target);
     const status = form.querySelector('.page-image-status');
     const input = form.querySelector('input[type=file]');
@@ -21,7 +23,7 @@
       const data = new FormData(form);
       try {
         if (window.shrinkImage) data.set('image', await window.shrinkImage(input.files[0]));
-        const res = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const res = await fetch(url, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
         const body = await res.text();
         let json;
         try {
