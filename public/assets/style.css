@@ -256,3 +256,11 @@ textarea.tall { min-height: 260px; }
 .crop-zoom { font-size: 14px; font-weight: 400; }
 .crop-zoom input { width: 100%; }
 @media (max-width: 560px) { .crop-side { grid-template-columns: 120px minmax(0, 1fr); align-items: center; } .crop-side > .hint { grid-column: 1 / -1; } .crop-preview { grid-row: span 2; } }
+
+/* Bilder i sidetekster */
+.prose figure { margin: 0 0 1.2em; }
+.prose figure img { display: block; max-width: 100%; height: auto; border-radius: var(--radius); }
+.prose figcaption { margin-top: 6px; color: var(--muted); font-size: .9rem; }
+.page-image { display: grid; gap: 8px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.page-image-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.page-image-fields input[type=text] { flex: 1 1 180px; min-width: 0; }

@@ -43,7 +43,7 @@ function page_header(string $title, string $active): void
 </header>
 <nav class="tabs" aria-label="Meny">
   <div class="wrap">
-    <?php foreach (['forside' => ['/', 'Forside'], 'auksjon' => ['/auksjon/', 'Auksjon'], 'basar' => ['/basar/', 'Basar'], 'historie' => ['/historie/', 'Historie'], 'komite' => ['/komite/', 'For komiteen']] as $key => [$href, $label]): ?>
+    <?php foreach (['forside' => ['/', 'Forside'], 'auksjon' => ['/auksjon/', 'Auksjon'], 'basar' => ['/basar/', 'Basar'], 'loppemarked' => ['/loppemarked/', 'Loppemarked'], 'salgsboder' => ['/salgsboder/', 'Salgsboder'], 'historie' => ['/historie/', 'Historie'], 'komite' => ['/komite/', 'For komiteen']] as $key => [$href, $label]): ?>
       <a class="tab<?= $key === 'komite' ? ' tab-end' : '' ?>" href="<?= $href ?>"<?= $active === $key ? ' aria-current="page"' : '' ?>><?= $label ?></a>
     <?php endforeach ?>
   </div>

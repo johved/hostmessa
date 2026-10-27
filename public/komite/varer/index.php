@@ -105,9 +105,6 @@ $f = $edit ?? ['id' => 0, 'title' => $fromGallery['caption'] ?? '', 'description
           <input type="number" id="f-price" name="min_price" min="0" step="1" inputmode="numeric" value="<?= h($f['min_price'] === null ? '' : (string) $f['min_price']) ?>">
         </label>
       </div>
-      <label for="f-giver">Gitt av <span class="hint">Vises i katalogen. Skriv «Anonym giver» om giveren ønsker det.</span>
-        <input type="text" id="f-giver" name="giver" maxlength="100" value="<?= h($f['giver']) ?>" required>
-      </label>
       <button class="btn" type="submit"><?= $edit ? 'Lagre endringer' : 'Legg ut i katalogen' ?></button>
     </form>
 

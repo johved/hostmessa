@@ -175,13 +175,12 @@ if ($action === 'save_item') {
     $title = trim((string) ($_POST['title'] ?? ''));
     $description = trim((string) ($_POST['description'] ?? ''));
     $category = (string) ($_POST['category'] ?? '');
-    $giver = trim((string) ($_POST['giver'] ?? ''));
     $price = trim((string) ($_POST['min_price'] ?? ''));
     $minPrice = $price === '' ? null : max(0, (int) $price);
     $crop = parse_crop((string) ($_POST['crop'] ?? ''));
 
-    if ($title === '' || $description === '' || $giver === '' || ($category !== '' && !in_array($category, categories(), true))) {
-        flash('error', 'Fyll inn varenavn, beskrivelse og hvem som har gitt varen.');
+    if ($title === '' || $description === '' || ($category !== '' && !in_array($category, categories(), true))) {
+        flash('error', 'Fyll inn varenavn og beskrivelse.');
         redirect($back);
     }
 
@@ -220,15 +219,15 @@ if ($action === 'save_item') {
     }
 
     if ($existing) {
-        db()->prepare('UPDATE items SET title = ?, description = ?, category = ?, min_price = ?, giver = ?, image = ?, crop = ? WHERE id = ?')
-            ->execute([$title, $description, $category, $minPrice, $giver, $image, $crop, $id]);
+        db()->prepare('UPDATE items SET title = ?, description = ?, category = ?, min_price = ?, image = ?, crop = ? WHERE id = ?')
+            ->execute([$title, $description, $category, $minPrice, $image, $crop, $id]);
         $message = sprintf('«%s» (%s) er oppdatert.', $title, lot_no((int) $existing['lot']));
     } else {
         $pdo = db();
         $pdo->beginTransaction();
         $lot = (int) $pdo->query('SELECT COALESCE(MAX(lot), 0) + 1 FROM items FOR UPDATE')->fetchColumn();
         $pdo->prepare('INSERT INTO items (lot, title, description, category, min_price, giver, image, crop, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-            ->execute([$lot, $title, $description, $category, $minPrice, $giver, $image, $crop, $user['id']]);
+            ->execute([$lot, $title, $description, $category, $minPrice, '', $image, $crop, $user['id']]);
         $id = (int) $pdo->lastInsertId();
         $pdo->commit();
         $message = sprintf('«%s» er lagt ut som %s og vises nå i katalogen.', $title, lot_no($lot));
@@ -436,6 +435,31 @@ if ($action === 'save_page') {
         flash('ok', sprintf('%s er oppdatert.', PAGES[$slug]['title']));
     }
     redirect(komite_url('tekster') . '#side-' . $slug);
+}
+
+if ($action === 'upload_page_image') {
+    require_admin($user, komite_url());
+    $slug = (string) ($_POST['slug'] ?? '');
+    $caption = trim(str_replace([']', '[', "\n", "\r"], ' ', mb_substr((string) ($_POST['caption'] ?? ''), 0, 150)));
+    $file = $_FILES['image'] ?? null;
+    try {
+        if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
+            throw new RuntimeException('Velg et bilde først.');
+        }
+        $markdown = '![' . $caption . '](/uploads/' . save_uploaded_image($file) . ')';
+        $error = null;
+    } catch (RuntimeException $e) {
+        $markdown = null;
+        $error = $e->getMessage();
+    }
+    if (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json') {
+        header('Content-Type: application/json');
+        echo json_encode(['markdown' => $markdown, 'error' => $error]);
+        exit;
+    }
+    // Uten JavaScript: vis linjen som skal limes inn i teksten.
+    flash($error ? 'error' : 'ok', $error ?? 'Bildet er lastet opp. Lim inn denne linjen i teksten der bildet skal stå: ' . $markdown);
+    redirect(komite_url('tekster') . '#side-' . rawurlencode($slug));
 }
 
 if ($action === 'add_user') {

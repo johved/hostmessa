@@ -3,7 +3,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/layout.php';
 
-$items = db()->query('SELECT id, lot, title, description, category, min_price, giver, image, crop FROM items ORDER BY lot')->fetchAll();
+$items = db()->query('SELECT id, lot, title, description, category, min_price, image, crop FROM items ORDER BY lot')->fetchAll();
 $extraImages = extra_images();
 $gallery = db()->query('SELECT image, caption FROM gallery ORDER BY id')->fetchAll();
 $usedCategories = array_values(array_filter(categories(), fn ($c) => in_array($c, array_column($items, 'category'), true)));
@@ -38,7 +38,6 @@ page_header('Auksjon · Høstmessa', 'auksjon');
           data-desc="<?= h($item['description']) ?>"
           data-cat="<?= h($item['category']) ?>"
           data-price="<?= h(kr($item['min_price'] === null ? null : (int) $item['min_price'])) ?>"
-          data-giver="<?= h($item['giver']) ?>"
           <?php $extras = array_map(fn ($x) => '/uploads/' . $x['image'], $extraImages[(int) $item['id']] ?? []); ?>
           data-images="<?= h(json_encode($item['image'] ? array_merge(['/uploads/' . $item['image']], $extras) : $extras)) ?>">
           <div class="photo"><?= photo_html($item) ?><span class="lot"><?= h(lot_no((int) $item['lot'])) ?></span><?php if ($extras): ?><span class="more-photos"><?= count($extras) + 1 ?> bilder</span><?php endif ?></div>
@@ -97,7 +96,6 @@ page_header('Auksjon · Høstmessa', 'auksjon');
         <dl class="kv">
           <dt>Varenummer</dt><dd id="dlg-lot"></dd>
           <dt>Minstepris</dt><dd id="dlg-pris"></dd>
-          <dt>Gitt av</dt><dd id="dlg-giver"></dd>
         </dl>
         <?php if (messe()['auksjon_tid'] !== ''): ?>
           <p class="small-note">Budene gis i salen under auksjonen, som starter <?= h(messe()['auksjon_tid']) ?>.</p>

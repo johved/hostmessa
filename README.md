@@ -5,7 +5,8 @@ Nettside for Høstmessa, som arrangeres av Lindesnes KFUK-KFUM hver høst.
 - **Forside** (`/`): informasjon om årets messe og noen smakebiter fra auksjonen.
 - **Auksjon** (`/auksjon/`): katalog over varene som selges på auksjonen, med flere bilder per vare, søk og kategorifilter, og et bildegalleri for varer som ikke er beskrevet i katalogen.
 - **Basar** (`/basar/`): informasjon om basaren.
-- **Historie** (`/historie/`): messens historie.
+- **Loppemarked** (`/loppemarked/`) og **Salgsboder** (`/salgsboder/`): informasjon om loppemarkedet og salgsbodene.
+- **Historie** (`/historie/`): Høstmessens historie.
 - **For komiteen** (`/komite/`): innlogging og egne undersider for utvalgte varer (med beskjæring av hovedbildet), bildegalleri, kategorier, messeinfo, sidetekster, brukere og eget passord. Et galleribilde kan gjøres om til en utvalgt vare. Det finnes to brukergrupper: **administratorer** kan endre alt, mens **bidragsytere** kan legge ut varer og galleribilder og endre det de har lagt ut selv. Brukere som fantes før brukergruppene kom, er administratorer.
 
 Løsningen kjører som tre Docker-containere:

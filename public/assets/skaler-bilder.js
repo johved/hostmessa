@@ -25,6 +25,8 @@
     });
   }
 
+  window.shrinkImage = shrink;
+
   // De nedskalerte bildene legges tilbake i skjemaet, og skjemaet sendes som vanlig.
   // Da viser nettleseren svaret fra serveren direkte, også om noe går galt.
   function canReplaceFiles() {

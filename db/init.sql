@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS items (
   description TEXT NOT NULL,
   category    VARCHAR(50) NOT NULL,
   min_price   INT UNSIGNED NULL,
-  giver       VARCHAR(100) NOT NULL,
+  giver       VARCHAR(100) NOT NULL DEFAULT '',
   image       VARCHAR(100) NULL,
   crop        VARCHAR(60) NULL,
   created_by  INT UNSIGNED NULL,

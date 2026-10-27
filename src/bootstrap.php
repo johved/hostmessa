@@ -458,8 +458,16 @@ const PAGES = [
         'title' => 'Basar',
         'default' => "Her kommer informasjon om basaren. Komiteen kan skrive den under «For komiteen».",
     ],
+    'loppemarked' => [
+        'title' => 'Loppemarked',
+        'default' => "Her kommer informasjon om loppemarkedet. Komiteen kan skrive den under «For komiteen».",
+    ],
+    'salgsboder' => [
+        'title' => 'Salgsboder',
+        'default' => "Her kommer informasjon om salgsbodene. Komiteen kan skrive den under «For komiteen».",
+    ],
     'historie' => [
-        'title' => 'Messens historie',
+        'title' => 'Høstmessens historie',
         'default' => "Her kommer historien om Høstmessa. Komiteen kan skrive den under «For komiteen».",
     ],
 ];
@@ -472,7 +480,7 @@ function page_body(string $slug): array
 }
 
 // Enkel og trygg formatering: tom linje gir nytt avsnitt, «## » gir overskrift,
-// «- » gir punktliste, **fet** og [lenketekst](https://...).
+// «- » gir punktliste, **fet**, [lenketekst](https://...) og ![bildetekst](/uploads/...) for bilder.
 function format_text(string $text): string
 {
     $inline = function (string $s): string {
@@ -489,11 +497,29 @@ function format_text(string $text): string
                 continue;
             }
         }
-        if (array_filter($lines, fn ($l) => str_starts_with($l, '- ')) === $lines) {
-            $html .= '<ul>' . implode('', array_map(fn ($l) => '<li>' . $inline(substr($l, 2)) . '</li>', $lines)) . '</ul>';
-        } else {
-            $html .= '<p>' . implode('<br>', array_map($inline, $lines)) . '</p>';
+        // Bilder står på egen linje: ![bildetekst](/uploads/navn.jpg). Bare bilder lastet opp her godtas.
+        $text = [];
+        $flush = function () use (&$text, &$html, $inline): void {
+            if (!$text) {
+                return;
+            }
+            if (array_filter($text, fn ($l) => str_starts_with($l, '- ')) === $text) {
+                $html .= '<ul>' . implode('', array_map(fn ($l) => '<li>' . $inline(substr($l, 2)) . '</li>', $text)) . '</ul>';
+            } else {
+                $html .= '<p>' . implode('<br>', array_map($inline, $text)) . '</p>';
+            }
+            $text = [];
+        };
+        foreach ($lines as $line) {
+            if (preg_match('#^!\[([^\]]*)\]\(/uploads/([a-f0-9]{32}\.jpg)\)$#u', trim($line), $m)) {
+                $flush();
+                $html .= '<figure><img src="/uploads/' . $m[2] . '" alt="' . h($m[1]) . '" loading="lazy">'
+                    . ($m[1] !== '' ? '<figcaption>' . h($m[1]) . '</figcaption>' : '') . '</figure>';
+            } else {
+                $text[] = $line;
+            }
         }
+        $flush();
     }
     return $html;
 }

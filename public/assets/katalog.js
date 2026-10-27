@@ -73,7 +73,6 @@
     document.getElementById('dlg-desc').textContent = d.desc;
     document.getElementById('dlg-lot').textContent = d.lot;
     document.getElementById('dlg-pris').textContent = d.price;
-    document.getElementById('dlg-giver').textContent = d.giver;
     dlg.showModal();
   });
   document.getElementById('dlg-close').addEventListener('click', () => dlg.close());
