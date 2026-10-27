@@ -1,22 +1,26 @@
-// Laster opp et bilde til en sidetekst og setter inn bildelinjen der markøren står.
+// Laster opp et bilde til en sidetekst så snart det er valgt, og setter inn bildelinjen
+// etter avsnittet man sist klikket i (eller nederst).
 (() => {
   document.querySelectorAll('form.page-image').forEach((form) => {
     if (!window.fetch || !window.FormData) return;
     const textarea = document.getElementById(form.dataset.target);
     const status = form.querySelector('.page-image-status');
-    const button = form.querySelector('button[type=submit]');
+    const input = form.querySelector('input[type=file]');
+    const pick = form.querySelector('.page-image-pick');
     let cursor = null;
-    textarea.addEventListener('blur', () => { cursor = textarea.selectionStart; });
+    const remember = () => { cursor = textarea.selectionStart; };
+    textarea.addEventListener('click', remember);
+    textarea.addEventListener('keyup', remember);
+    textarea.addEventListener('blur', remember);
+    form.addEventListener('submit', (e) => e.preventDefault());
 
-    form.addEventListener('submit', async (e) => {
-      const input = form.querySelector('input[type=file]');
+    input.addEventListener('change', async () => {
       if (!input.files.length) return;
-      e.preventDefault();
-      button.disabled = true;
-      status.textContent = 'Laster opp …';
+      pick.classList.add('busy');
+      status.textContent = 'Laster opp bildet …';
       const data = new FormData(form);
-      if (window.shrinkImage) data.set('image', await window.shrinkImage(input.files[0]));
       try {
+        if (window.shrinkImage) data.set('image', await window.shrinkImage(input.files[0]));
         const res = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
         const body = await res.text();
         let json;
@@ -29,19 +33,24 @@
         }
         if (json.error) throw new Error(json.error);
         if (!json.markdown) throw new Error('Serveren kjenner ikke igjen opplastingen. Er alle filene i src/ og public/ lastet opp?');
-        const at = cursor ?? textarea.value.length;
+        // Bildet settes inn etter avsnittet man klikket i, så avsnittet ikke deles i to.
+        let at = cursor ?? textarea.value.length;
+        const blank = textarea.value.slice(at).search(/\n\s*\n/);
+        at = blank === -1 ? textarea.value.length : at + blank;
         const before = textarea.value.slice(0, at).replace(/\s*$/, '');
         const after = textarea.value.slice(at).replace(/^\s*/, '');
         textarea.value = (before ? before + '\n\n' : '') + json.markdown + (after ? '\n\n' + after : '\n');
-        cursor = (before ? before.length + 2 : 0) + json.markdown.length;
+        const start = before ? before.length + 2 : 0;
+        cursor = start + json.markdown.length;
         textarea.focus();
-        textarea.setSelectionRange(cursor, cursor);
+        textarea.setSelectionRange(start, cursor);
         form.reset();
-        status.textContent = 'Bildet er satt inn. Husk å lagre teksten.';
+        status.textContent = 'Bildet er satt inn (markert i teksten). Husk å lagre teksten.';
       } catch (err) {
-        status.textContent = err.message.startsWith('Serveren') || !(err instanceof TypeError) ? err.message : 'Bildet kunne ikke lastes opp. Sjekk nettforbindelsen og prøv igjen.';
+        status.textContent = err instanceof TypeError ? 'Bildet kunne ikke lastes opp. Sjekk nettforbindelsen og prøv igjen.' : err.message;
+        input.value = '';
       }
-      button.disabled = false;
+      pick.classList.remove('busy');
     });
   });
 })();

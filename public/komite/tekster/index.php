@@ -29,13 +29,20 @@ $user = komite_page('tekster');
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="upload_page_image">
       <input type="hidden" name="slug" value="<?= $slug ?>">
-      <strong>Sett inn bilde</strong>
+      <strong>Bilde i teksten</strong>
+      <ol class="page-image-steps">
+        <li>Klikk i avsnittet bildet skal stå etter. Klikker du ikke, havner bildet nederst.</li>
+        <li>Skriv en bildetekst hvis du vil.</li>
+        <li>Trykk «Velg bilde» og velg bildet. Det lastes opp og settes inn med en gang.</li>
+      </ol>
       <div class="page-image-fields">
-        <input type="file" name="image" accept="image/jpeg,image/png,image/webp" aria-label="Bilde til <?= h(mb_strtolower($pageInfo['title'])) ?>" required>
         <input type="text" name="caption" maxlength="150" placeholder="Bildetekst (valgfritt)" aria-label="Bildetekst">
-        <button class="btn ghost" type="submit">Sett inn</button>
+        <label class="btn ghost page-image-pick">Velg bilde
+          <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required>
+        </label>
+        <noscript><button class="btn ghost" type="submit">Last opp</button></noscript>
       </div>
-      <span class="hint page-image-status">Bildet settes inn der markøren står i teksten. Husk å lagre teksten etterpå.</span>
+      <span class="hint page-image-status" role="status">Husk å lagre teksten etterpå.</span>
     </form>
     </div>
     <div class="help">
@@ -45,7 +52,7 @@ $user = komite_page('tekster');
       <code>- punkt</code> for punktliste.<br>
       <code>**fet tekst**</code><br>
       <code>[lenketekst](https://adresse.no)</code><br>
-      <code>![bildetekst](/uploads/…)</code> er et bilde. Bruk «Sett inn bilde», så lages linjen for deg.</p>
+      <code>![bildetekst](/uploads/…)</code> er et bilde. Bruk «Velg bilde» under teksten, så lages linjen for deg. Du kan flytte linjen etterpå.</p>
     </div>
   </div>
 </section>

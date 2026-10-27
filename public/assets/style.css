@@ -264,3 +264,7 @@ textarea.tall { min-height: 260px; }
 .page-image { display: grid; gap: 8px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .page-image-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .page-image-fields input[type=text] { flex: 1 1 180px; min-width: 0; }
+.page-image-steps { margin: 0; padding-left: 1.2em; font-size: 14px; color: var(--muted); }
+.page-image-pick { position: relative; cursor: pointer; }
+.page-image-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.page-image-pick.busy { opacity: .6; pointer-events: none; }
