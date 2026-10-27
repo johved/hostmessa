@@ -448,9 +448,10 @@ if ($action === 'upload_page_image') {
         }
         $markdown = '![' . $caption . '](/uploads/' . save_uploaded_image($file) . ')';
         $error = null;
-    } catch (RuntimeException $e) {
+    } catch (Throwable $e) {
+        error_log('Bilde i sidetekst: ' . $e);
         $markdown = null;
-        $error = $e->getMessage();
+        $error = $e instanceof RuntimeException ? $e->getMessage() : 'Bildet kunne ikke lagres på serveren.';
     }
     if (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json') {
         header('Content-Type: application/json');

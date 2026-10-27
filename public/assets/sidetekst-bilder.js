@@ -18,8 +18,17 @@
       if (window.shrinkImage) data.set('image', await window.shrinkImage(input.files[0]));
       try {
         const res = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
-        const json = await res.json();
+        const body = await res.text();
+        let json;
+        try {
+          json = JSON.parse(body);
+        } catch (err) {
+          // Serveren svarte ikke med JSON, for eksempel en feilside. Vis starten av svaret.
+          const text = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+          throw new Error(`Serveren svarte med feil ${res.status}${text ? ': ' + text : ''}`);
+        }
         if (json.error) throw new Error(json.error);
+        if (!json.markdown) throw new Error('Serveren kjenner ikke igjen opplastingen. Er alle filene i src/ og public/ lastet opp?');
         const at = cursor ?? textarea.value.length;
         const before = textarea.value.slice(0, at).replace(/\s*$/, '');
         const after = textarea.value.slice(at).replace(/^\s*/, '');
@@ -30,7 +39,7 @@
         form.reset();
         status.textContent = 'Bildet er satt inn. Husk å lagre teksten.';
       } catch (err) {
-        status.textContent = err.message && !err.message.startsWith('Unexpected') ? err.message : 'Bildet kunne ikke lastes opp. Prøv igjen.';
+        status.textContent = err.message.startsWith('Serveren') || !(err instanceof TypeError) ? err.message : 'Bildet kunne ikke lastes opp. Sjekk nettforbindelsen og prøv igjen.';
       }
       button.disabled = false;
     });

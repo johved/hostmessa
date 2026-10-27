@@ -149,6 +149,8 @@ function start_session(): void
         return;
     }
     session_name('hostmessa');
+    // Komiteen kan ha en side åpen lenge mens de skriver. Standard er 24 minutter.
+    ini_set('session.gc_maxlifetime', '28800');
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
@@ -176,8 +178,13 @@ function csrf_field(): string
 function check_csrf(): void
 {
     if (!hash_equals(csrf_token(), (string) ($_POST['csrf'] ?? ''))) {
+        $message = 'Siden var utløpt, kanskje fordi du har vært logget ut. Last siden på nytt og prøv igjen.';
         http_response_code(400);
-        exit('Skjemaet var utløpt. Gå tilbake, last siden på nytt og prøv igjen.');
+        if (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json') {
+            header('Content-Type: application/json');
+            exit(json_encode(['error' => $message, 'saved' => 0, 'errors' => [$message]]));
+        }
+        exit($message);
     }
 }
 
